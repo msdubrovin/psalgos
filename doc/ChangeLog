@@ -13,6 +13,18 @@ reverse time order.
 
 Tag: V00-00-01
 2017-08-02 Mikhail S. Dubrovin
+- add 
+	doc/ChangeLog
+	examples/ex-02-localextrema.py
+	include/LocalExtrema.h
+	include/Types.h
+	include/ctest_nda.h
+	pyext/psalgos_ext.pyx-test-numpy
+	src/LocalExtrema.cpp
+	src/pypsalgos.py
+
+
+2017-08-02 Mikhail S. Dubrovin
 - just created this template file, this entry is an example of the change log
   entry
 - keep it brief and easy to read

@@ -30,3 +30,6 @@ Import('*')
 #
 #
 standardSConscript(PYEXTMOD="psalgos_ext")
+#standardSConscript(PYEXTMOD="psalgos_ext", CCFLAGS="-Wstrict-aliasing=2")
+#standardSConscript(PYEXTMOD="psalgos_ext", CCFLAGS="-Wno-cpp")
+#standardSConscript(PYEXTMOD="psalgos_ext", CCFLAGS="-Wno-cpp -Wno-#warning")
