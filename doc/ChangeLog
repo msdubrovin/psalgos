@@ -13,7 +13,7 @@ reverse time order.
 
 Tag: V00-00-01
 2017-08-02 Mikhail S. Dubrovin
-- add 
+- add misc modules
 	doc/ChangeLog
 	examples/ex-02-localextrema.py
 	include/LocalExtrema.h
