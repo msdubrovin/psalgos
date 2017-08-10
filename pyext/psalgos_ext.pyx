@@ -28,6 +28,9 @@ cdef extern from "<stdint.h>" nogil:
     ctypedef unsigned int   uint32_t
     ctypedef unsigned long  uint64_t
 
+
+# ctypedef uint16_t mask_t
+
 #------------------------------
 
 cimport numpy as np
@@ -128,27 +131,69 @@ def print_vector_of_diag_indexes(int32_t& rank) : printVectorOfDiagIndexes(rank)
 #------------------------------
 #------------------------------
 
-#cdef extern from "ndarray/ndarray.h" : # namespace "std":
-#    cdef cppclass ndarray[ElemType, NDim]:
-#        double x, y, time
-#        int32_t method
-#        hit_class(sort_class *) except +
+cdef extern from "psalgos/PeakFinderAlgos.h" namespace "psalgos":
+    cdef cppclass PeakFinderAlgos:
+         #float  m_r0
+         #float  m_dr
+         #size_t m_rank
+         #size_t m_pixgrp_max_size
+         #size_t m_img_size
+         #float  m_nsigm
 
-#cdef class py_ndarray:
-#    """ Python wrapper for C++ class. 
-#    """
-#    cdef hit_ndarray* cptr  # holds a C++ instance
+         PeakFinderAlgos(const size_t& seg, const unsigned& pbits) except +
 
-#    def __cinit__(self, py_sort_class sorter, int i=0):
-#        #print "In py_hit_class.__cinit__ index: %d" % i
-#        self.cptr = sorter.cptr.output_hit_array[i]
+         void setPeakSelectionPars(const float& npix_min
+                                  ,const float& npix_max
+                                  ,const float& amax_thr
+                                  ,const float& atot_thr
+                                  ,const float& son_min)
 
-##    def __dealloc__(self):
-##        print "In py_hit_class.__dealloc__"
-##        del self.cptr
+
+         void peakFinderV3r3[T](const T *data
+                               ,const uint16_t *mask
+                               ,const size_t& rows
+                               ,const size_t& cols
+                               ,const size_t& rank
+	                       ,const double& r0
+	                       ,const double& dr
+	                       ,const double& nsigm)
+
+#------------------------------
+
+cdef class peak_finder_algos :
+    """ Python wrapper for C++ class. 
+    """
+    cdef PeakFinderAlgos* cptr  # holds a C++ pointer to instance
+
+    def __cinit__(self, seg=0, pbits=0):
+        #print "In peak_finder_algos.__cinit__"
+        self.cptr = new PeakFinderAlgos(seg, pbits)
+
+    def __dealloc__(self):
+        #print "In py_hit_class.__dealloc__"
+        del self.cptr
+
+
+    def set_peak_selection_parameters(self\
+                                     ,const float& npix_min\
+                                     ,const float& npix_max\
+                                     ,const float& amax_thr\
+                                     ,const float& atot_thr\
+                                     ,const float& son_min) :
+        self.cptr.setPeakSelectionPars(npix_min, npix_max, amax_thr, atot_thr, son_min)
+
+
+    def peak_finder_v3r3(self\
+                        ,nptype2d data\
+                        ,np.ndarray[uint16_t, ndim=2, mode="c"] mask\
+                        ,const size_t& rank\
+                        ,const double& r0\
+                        ,const double& dr\
+                        ,const double& nsigm) :
+        self.cptr.peakFinderV3r3(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, r0, dr, nsigm)
 
 #    @property
-#    def x(self) : return self.cptr.x
+#    def r0(self) : return self.cptr.m_r0
 
 #------------------------------
 #------------------------------

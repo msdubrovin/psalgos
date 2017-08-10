@@ -3,9 +3,9 @@
 
 //#include "psalgos/Types.h" // TwoIndexes
 #include "psalgos/LocalExtrema.h"
+#include <sstream>   // for stringstream
 //#include <cmath>     // floor, ceil
 //#include <iomanip>   // for std::setw
-#include <sstream>   // for stringstream
 
 //-----------------------------
 
@@ -90,11 +90,37 @@ void printVectorOfDiagIndexes(const size_t& rank)
     ss << " (" << ij->i << "," << ij->j << ")";
     if ( ++n_pairs_in_line > 9 ) {ss << "\n"; n_pairs_in_line=0;}
   }   
-
+  ss << '\n';
   //MsgLog(_name(), info, ss.str());
   cout << ss.str();
 }
 
+//-----------------------------
+
+size_t numberOfExtrema(const extrim_t *map, const size_t& rows, const size_t& cols, const extrim_t& vsel)
+{
+  size_t counter=0;
+  for (size_t i=0; i<rows*cols; ++i) if(map[i]==vsel) counter++;
+  return counter;
+}
+
+//-----------------------------
+
+std::vector<TwoIndexes> vectorOfExtremeIndexes(const extrim_t *map, const size_t& rows, const size_t& cols, const extrim_t& vsel, const size_t& maxlen)
+{
+  std::vector<TwoIndexes> v;
+  size_t _maxlen = (maxlen) ? maxlen : rows*cols/4;
+  if(v.capacity() < _maxlen) v.reserve(_maxlen);
+  v.clear();
+  size_t irc=0;
+  for (size_t r=0; r<rows; ++r) {
+    for (size_t c=0; c<cols; ++c) {
+      irc = r*cols+c;
+      if(map[irc]==vsel) v.push_back(TwoIndexes(r,c));
+    }
+  }
+  return v;
+}
 
 //-----------------------------
 //-----------------------------

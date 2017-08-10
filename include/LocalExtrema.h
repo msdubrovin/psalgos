@@ -1,10 +1,9 @@
 #ifndef PSALGOS_LOCALEXTREMA_H
 #define PSALGOS_LOCALEXTREMA_H
-//--------------------------------------------------------------------------
-// $Id: LocalExtrema.h 12925 2017-08-04 10:00:00Z dubrovin@SLAC.STANFORD.EDU $
-//
-// Description: see documentation below
-//------------------------------------------------------------------------
+
+//-----------------------------
+// LocalExtrema.h 2017-08-04
+//-----------------------------
 
 #include <string>
 #include <vector>
@@ -30,8 +29,6 @@ namespace localextrema {
  *
  *  This software was developed for the LCLS project.  
  *  If you use all or part of it, please give an appropriate acknowledgment.
- *
- *  @version $Id:$
  *
  *  @author Mikhail Dubrovin
  *
@@ -67,14 +64,18 @@ namespace localextrema {
  *  @li Call methods
  *  \n
  *  @code
- *  mapOfLocalMinimums(data, mask, rows, cols, rank, map);
- *  mapOfLocalMaximums(data, mask, rows, cols, rank, map);
- *  mapOfLocalMaximumsRank1Cross(data, mask, rows, cols, map);
+ *  mapOfLocalMinimums<T>(data, mask, rows, cols, rank, map);
+ *  mapOfLocalMaximums<T>(data, mask, rows, cols, rank, map);
+ *  mapOfLocalMaximumsRank1Cross<T>(data, mask, rows, cols, map);
 
  *  std::vector<TwoIndexes> v = evaluateDiagIndexes(const size_t& rank);
  *  printMatrixOfDiagIndexes(rank);
  *  printVectorOfDiagIndexes(rank);
- *  
+ *
+ *  const extrim_t vsel=7;
+ *  const size_t maxlen=1000;
+ *  std::vector<TwoIndexes> v = vectorOfExtremeIndexes(map, rows, cols, vsel, maxlen);
+ *  size_t n = numberOfExtrema(map, rows, cols, vsel);
  *  @endcode
  */
 
@@ -89,6 +90,8 @@ typedef types::TwoIndexes TwoIndexes;
 std::vector<TwoIndexes> evaluateDiagIndexes(const size_t& rank);
 void printMatrixOfDiagIndexes(const size_t& rank);
 void printVectorOfDiagIndexes(const size_t& rank);
+size_t numberOfExtrema(const extrim_t *map, const size_t& rows, const size_t& cols, const extrim_t& vsel=7);
+std::vector<TwoIndexes> vectorOfExtremeIndexes(const extrim_t *map, const size_t& rows, const size_t& cols, const extrim_t& vsel=7, const size_t& maxlen=0);
 
 //-----------------------------
   /**
@@ -107,14 +110,15 @@ void printVectorOfDiagIndexes(const size_t& rank);
 //-----------------------------
 
 template <typename T>
-void mapOfLocalMinimums( const T *data
-                       , const mask_t *mask
-                       , const size_t& rows
-                       , const size_t& cols
-                       , const size_t& rank
-                       , extrim_t *map
+void mapOfLocalMinimums(const T *data
+                       ,const mask_t *mask
+                       ,const size_t& rows
+                       ,const size_t& cols
+                       ,const size_t& rank
+                       ,extrim_t *map
                        )
 {
+  // std::cout << "XXX mapOfLocalMinimums point E \n";
   // MsgLog(_name(), debug, "in napOfLocalMinimums, rank=" << rank << "\n);
 
   // initialization of indexes
@@ -125,7 +129,7 @@ void mapOfLocalMinimums( const T *data
 
   //if(m_local_minimums.empty()) 
   //   m_local_minimums = make_ndarray<extrim_t>(data.shape()[0], data.shape()[1]);
-  std::fill_n(&m_local_minimums[0], int(rows*cols), extrim_t(0));
+  std::fill_n(m_local_minimums, int(rows*cols), extrim_t(0));
 
   unsigned rmin = 0;
   unsigned rmax = (int)rows;
@@ -261,12 +265,12 @@ void mapOfLocalMinimums( const T *data
    */
 
 template <typename T>
-void mapOfLocalMaximums( const T *data
-                       , const mask_t *mask
-                       , const size_t& rows
-                       , const size_t& cols
-                       , const size_t& rank
-                       , extrim_t *map
+void mapOfLocalMaximums(const T *data
+                       ,const mask_t *mask
+                       ,const size_t& rows
+                       ,const size_t& cols
+                       ,const size_t& rank
+                       ,extrim_t *map
                        )
 {
   //MsgLog(_name(), debug, "in mapOfLocalMaximums, rank=" << rank << "\n");
@@ -393,6 +397,11 @@ void mapOfLocalMaximums( const T *data
       if(m_local_maximums[irc] & 4) c+=rank;
     }
   }
+  // TEST OF numberOfExtrema and vectorOfExtremeIndexes
+  //size_t nextrema = numberOfExtrema(map, rows, cols, 7);
+  //std::cout << "Result of numberOfExtrema: " << nextrema << '\n';
+  //std::vector<TwoIndexes> v = vectorOfExtremeIndexes(map, rows, cols, 7, nextrema);
+  //std::cout << "vector<TwoIndexes> size: " << v.size() << '\n'; 
 }
 
 //-----------------------------
@@ -411,11 +420,11 @@ void mapOfLocalMaximums( const T *data
 
 template <typename T>
 void
-mapOfLocalMaximumsRank1Cross( const T *data
-                            , const mask_t *mask
-                            , const size_t& rows
-                            , const size_t& cols
-                            , extrim_t *map
+mapOfLocalMaximumsRank1Cross(const T *data
+                            ,const mask_t *mask
+                            ,const size_t& rows
+                            ,const size_t& cols
+                            ,extrim_t *map
                             )
 {
   //MsgLog(_name(), debug, "in mapOfLocalMaximumsRank1Cross");
@@ -489,14 +498,17 @@ mapOfLocalMaximumsRank1Cross( const T *data
     ircm2 = (rmax-2)*cols+c;
     if(mask[ircm] && mask[ircm2] && (data[ircm] > data[ircm2])) m_local_maximums[ircm] |= 2;  // set 2nd bit
   } // columns loop
+
+  // TEST OF numberOfExtrema and vectorOfExtremeIndexes
+  //size_t nextrema = numberOfExtrema(map, rows, cols, 3);
+  //std::cout << "Result of numberOfExtrema: " << nextrema << '\n';
+  //std::vector<TwoIndexes> v = vectorOfExtremeIndexes(map, rows, cols, 3, nextrema);
+  //std::cout << "vector<TwoIndexes> size: " << v.size() << '\n'; 
 }
 
 //-----------------------------
-
 //-----------------------------
-
 //-----------------------------
-
 //-----------------------------
 } // namespace localextrema
 //-----------------------------

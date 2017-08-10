@@ -11,6 +11,19 @@ Package author: Mikhail S. Dubrovin
 Please describe any modifications that you made to the package in the
 reverse time order.
 
+
+2017-08-09 Mikhail S. Dubrovin
+- work in progress on peakfinder_v3r3
+	modified:   examples/ex-02-localextrema.py
+	new file:   examples/ex-03-peakfinder.py
+	modified:   include/LocalExtrema.h
+	new file:   include/PeakFinderAlgos.h
+	modified:   include/Types.h
+	modified:   pyext/psalgos_ext.pyx
+	modified:   src/LocalExtrema.cpp
+	new file:   src/PeakFinderAlgos.cpp
+	modified:   src/pypsalgos.py
+
 Tag: V00-00-02
 2017-08-02 Mikhail S. Dubrovin
 - add misc modules

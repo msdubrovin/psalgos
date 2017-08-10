@@ -8,50 +8,63 @@ import numpy as np
 #data = ag.random_standard(shape=sh, mu=200, sigma=25, dtype=np.float64)
 #------------------------------
 
-def test01(tname='1') :
+def test01(tname='1', NUMBER_OF_EVENTS=5, DO_PRINT=False) :
+
+
     print 'local extrema : %s' % ('minimums' if tname=='1'\
                              else 'maximums' if tname=='2'\
                              else 'maximums runk=1 cross')
 
     from time import time
     from pyimgalgos.GlobalUtils import print_ndarr
-
-    sh = (200,200)
-    #sh = (1000,2000)
-    #sh = (185,388)
-    mu, sigma = 200, 25
-    data = np.array(mu + sigma*np.random.standard_normal(sh), dtype=np.float64)
-    mask = np.ones(sh, dtype=np.uint16)
-    extrema = np.zeros(sh, dtype=np.uint16)
-    rank=5
-
-    print_ndarr(data, 'input data')
-    t0_sec = time()
-    #----------
-    if   tname=='1' : algos.local_minimums_2d(data, mask, rank, extrema)
-    elif tname=='2' : algos.local_maximums_2d(data, mask, rank, extrema)
-    else            : algos.local_maximums_rank1_cross_2d(data, mask, extrema)
-    #----------
-    print 'Consumed time = %10.6f(sec)' % (time()-t0_sec)
-
-    print_ndarr(extrema, 'output extrema')
-
     import pyimgalgos.GlobalGraphics as gg
-    fs = (11,10) # (8,7) # 
+
+    #sh, fs = (200,200), (11,10)
+    sh, fs = (1000,1000), (11,10)
+    #sh, fs = (185,388), (11,5)
     fig1, axim1, axcb1, imsh1 = gg.fig_axim_axcb_imsh(figsize=fs)
     fig2, axim2, axcb2, imsh2 = gg.fig_axim_axcb_imsh(figsize=fs)
 
-    img1 = data
-    img2 = extrema
+    mu, sigma = 200, 25
 
-    ave, rms = img1.mean(), img1.std()
-    amin, amax = ave-1*rms, ave+5*rms
-    gg.plot_imgcb(fig1, axim1, axcb1, imsh1, img1, amin=amin, amax=amax, title='Data', cmap='inferno')
-    gg.move_fig(fig1, x0=400, y0=30)
+    for evnum in range(NUMBER_OF_EVENTS) :
 
-    gg.plot_imgcb(fig2, axim2, axcb2, imsh2, img2, amin=0, amax=5, title='Local extrema', cmap='inferno')
-    gg.move_fig(fig2, x0=0, y0=30)
+        data = np.array(mu + sigma*np.random.standard_normal(sh), dtype=np.float64)
+        mask = np.ones(sh, dtype=np.uint16)
+        extrema = np.zeros(sh, dtype=np.uint16)
+        rank=5
+        
+        if DO_PRINT : print_ndarr(data, 'input data')
+        t0_sec = time()
+        #----------
+        if   tname=='1' : algos.local_minimums_2d(data, mask, rank, extrema)
+        elif tname=='2' : algos.local_maximums_2d(data, mask, rank, extrema)
+        else            : algos.local_maximums_rank1_cross_2d(data, mask, extrema)
+        #----------
+        print 'Event: %4d,  consumed time = %10.6f(sec)' % (evnum, time()-t0_sec)
+        
+        if DO_PRINT : print_ndarr(extrema, 'output extrema')
+        
+        img1 = data
+        img2 = extrema
 
+        axim1.clear()
+        if imsh1 is not None : del imsh1
+        imsh1 = None
+
+        axim2.clear()
+        if imsh2 is not None : del imsh2
+        imsh2 = None
+        
+        ave, rms = img1.mean(), img1.std()
+        amin, amax = ave-1*rms, ave+5*rms
+        gg.plot_imgcb(fig1, axim1, axcb1, imsh1, img1, amin=amin, amax=amax, title='Event: %d, Data'%evnum, cmap='inferno')
+        gg.move_fig(fig1, x0=400, y0=30)
+        
+        gg.plot_imgcb(fig2, axim2, axcb2, imsh2, img2, amin=0, amax=5, title='Event: %d, Local extrema'%evnum, cmap='inferno')
+        gg.move_fig(fig2, x0=0, y0=30)
+        
+        gg.show(mode='DO_NOT_HOLD')
     gg.show()
 
 #------------------------------
