@@ -36,6 +36,9 @@ typedef types::TwoIndexes  TwoIndexes;
 /**
  * @brief Peak parameters
  */ 
+//class Peak{
+//public:
+
 struct Peak{
   float seg;
   float row;
@@ -55,6 +58,68 @@ struct Peak{
   float bkgd;
   float noise;
   float son;
+
+  Peak(){} // do not fill out member by default
+  /*
+  Peak(const float& _seg      =0, 
+       const float& _row      =0,
+       const float& _col      =0,
+       const float& _npix     =0,
+       const float& _npos     =0,
+       const float& _amp_max  =0,
+       const float& _amp_tot  =0,
+       const float& _row_cgrav=0,
+       const float& _col_cgrav=0,
+       const float& _row_sigma=0,
+       const float& _col_sigma=0,
+       const float& _row_min  =0,
+       const float& _row_max  =0,
+       const float& _col_min  =0,
+       const float& _col_max  =0,
+       const float& _bkgd     =0,
+       const float& _noise    =0,
+       const float& _son      =0) :
+       seg      (_seg      ),
+       row      (_row      ),
+       col      (_col      ), 
+       npix     (_npix     ),
+       npos     (_npos     ),
+       amp_max  (_amp_max  ),
+       amp_tot  (_amp_tot  ),
+       row_cgrav(_row_cgrav),
+       col_cgrav(_col_cgrav),
+       row_sigma(_row_sigma),
+       col_sigma(_col_sigma),
+       row_min  (_row_min  ),
+       row_max  (_row_max  ),
+       col_min  (_col_min  ),
+       col_max  (_col_max  ),
+       bkgd     (_bkgd     ),
+       noise    (_noise    ),
+       son      (_son      ){ }
+  */
+ 
+  //copy constructor http://en.cppreference.com/w/cpp/language/copy_constructor
+  Peak(const Peak& o)
+    : seg      (o.seg      )
+    , row      (o.row      )
+    , col      (o.col      )
+    , npix     (o.npix     )
+    , npos     (o.npos     )
+    , amp_max  (o.amp_max  )
+    , amp_tot  (o.amp_tot  )
+    , row_cgrav(o.row_cgrav)
+    , col_cgrav(o.col_cgrav)
+    , row_sigma(o.row_sigma)
+    , col_sigma(o.col_sigma)
+    , row_min  (o.row_min  )
+    , row_max  (o.row_max  )
+    , col_min  (o.col_min  )
+    , col_max  (o.col_max  )
+    , bkgd     (o.bkgd     )
+    , noise    (o.noise    )
+    , son      (o.son      )
+    {}
 
   Peak& operator=(const Peak& rhs) {
     seg         = rhs.seg;
@@ -97,6 +162,9 @@ struct RingAvgRms {
              const double& rm=0,
              const unsigned& np=0) :
     avg(av), rms(rm), npx(np) {}
+
+  //copy constructor
+  RingAvgRms(const RingAvgRms& o) : avg(o.avg), rms(o.rms), npx(o.npx){}
 
   RingAvgRms& operator=(const RingAvgRms& rhs) {
     avg = rhs.avg;
@@ -224,6 +292,38 @@ public:
 
   /// Prints vector of peaks, i.e. v_peaks_sel or v_peaks
   void _printVectorOfPeaks(const std::vector<Peak>& v);
+
+  /// Returns peak from v_peaks by specified index
+  const Peak& peak(const int& i=0){return v_peaks[i];}
+
+  /// Returns peak from v_peaks_sel by specified index
+  const Peak& peakSelected(const int& i=0){return v_peaks_sel[i];}
+
+  /// Returns vector of peaks v_peaks
+  const std::vector<Peak>& vectorOfPeaks(){return v_peaks;}
+
+  /// Returns vector of selected peaks v_peaks_sel
+  const std::vector<Peak>& vectorOfPeaksSelected(){return v_peaks_sel;}
+
+  /// Fills-out (returns) array of local maxima
+  void localMaxima(extrim_t *map, const size_t& rows, const size_t& cols) {
+    std::memcpy(map, m_local_maxima, rows*cols*sizeof(extrim_t)); 
+  }
+
+  /// Fills-out (returns) array of local minima
+  void localMinima(extrim_t *map, const size_t& rows, const size_t& cols) {
+    std::memcpy(map, m_local_minima, rows*cols*sizeof(extrim_t)); 
+  }
+
+  /// Fills-out (returns) array of m_conmap
+  void connectedPixels(conmap_t *map, const size_t& rows, const size_t& cols) {
+    std::memcpy(map, m_conmap, rows*cols*sizeof(conmap_t)); 
+  }
+
+  /// Fills-out (returns) array of m_pixel_status
+  void pixelStatus(pixstatus_t *map, const size_t& rows, const size_t& cols) {
+    std::memcpy(map, m_pixel_status, rows*cols*sizeof(pixstatus_t)); 
+  }
 
 private:
   size_t m_seg;      // segment index (for list of images)

@@ -11,6 +11,13 @@ Package author: Mikhail S. Dubrovin
 Please describe any modifications that you made to the package in the
 reverse time order.
 
+Tag: V00-00-03
+2017-08-12 Mikhail S. Dubrovin
+- work in progress on peakfinder_v3r3
+	modified:   ex-03-peakfinder.py
+	modified:   PeakFinderAlgos.h
+	modified:   psalgos_ext.pyx
+	modified:   pypsalgos.py
 
 2017-08-09 Mikhail S. Dubrovin
 - work in progress on peakfinder_v3r3

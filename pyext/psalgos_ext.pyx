@@ -10,7 +10,7 @@
 
 #------------------------------
 
-#from libcpp.vector cimport vector
+from libcpp.vector cimport vector
 #from libcpp cimport bool
 
 from libc.time cimport time_t, ctime
@@ -74,6 +74,10 @@ cdef extern from "psalgos/ctest_nda.h":
 def test_nda_v1(nptype2d nda): ctest_nda(&nda[0,0], nda.shape[0], nda.shape[1])
     
 #------------------------------
+#------------------------------
+#------------------------------
+#------------------------------
+#------------------------------
 
 cdef extern from "psalgos/LocalExtrema.h" namespace "localextrema":
 
@@ -82,7 +86,7 @@ cdef extern from "psalgos/LocalExtrema.h" namespace "localextrema":
                               , const size_t& rows
                               , const size_t& cols
                               , const size_t& rank
-                              , uint16_t *map
+                              , uint16_t *arr2d
                               )
 
     void mapOfLocalMaximums[T](const T *data
@@ -90,14 +94,14 @@ cdef extern from "psalgos/LocalExtrema.h" namespace "localextrema":
                               , const size_t& rows
                               , const size_t& cols
                               , const size_t& rank
-                              , uint16_t *map
+                              , uint16_t *arr2d
                               )
 
     void mapOfLocalMaximumsRank1Cross[T](const T *data
                               , const uint16_t *mask
                               , const size_t& rows
                               , const size_t& cols
-                              , uint16_t *map
+                              , uint16_t *arr2d
                               )
 
     void printMatrixOfDiagIndexes(const size_t& rank)
@@ -108,23 +112,142 @@ cdef extern from "psalgos/LocalExtrema.h" namespace "localextrema":
 def local_minimums(nptype2d data,\
                    np.ndarray[uint16_t, ndim=2, mode="c"] mask,\
                    int32_t rank,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] map\
-                  ): mapOfLocalMinimums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &map[0,0])
+                   np.ndarray[uint16_t, ndim=2, mode="c"] arr2d\
+                  ): mapOfLocalMinimums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &arr2d[0,0])
 
 def local_maximums(nptype2d data,\
                    np.ndarray[uint16_t, ndim=2, mode="c"] mask,\
                    int32_t rank,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] map\
-                  ): mapOfLocalMaximums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &map[0,0])
+                   np.ndarray[uint16_t, ndim=2, mode="c"] arr2d\
+                  ): mapOfLocalMaximums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &arr2d[0,0])
 
 def local_maximums_rank1_cross(nptype2d data,\
                    np.ndarray[uint16_t, ndim=2, mode="c"] mask,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] map\
-                  ): mapOfLocalMaximumsRank1Cross(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], &map[0,0])
+                   np.ndarray[uint16_t, ndim=2, mode="c"] arr2d\
+                  ): mapOfLocalMaximumsRank1Cross(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], &arr2d[0,0])
 
 def print_matrix_of_diag_indexes(int32_t& rank) : printMatrixOfDiagIndexes(rank)
 
 def print_vector_of_diag_indexes(int32_t& rank) : printVectorOfDiagIndexes(rank)
+
+#------------------------------
+#------------------------------
+#------------------------------
+#------------------------------
+
+cdef extern from "psalgos/PeakFinderAlgos.h" namespace "psalgos":
+    cdef cppclass Peak :
+        Peak() except +
+        Peak(const Peak& o) except +
+        Peak operator=(const Peak& rhs) except +
+        float seg
+        float row
+        float col
+        float npix
+        float npos
+        float amp_max
+        float amp_tot
+        float row_cgrav 
+        float col_cgrav
+        float row_sigma
+        float col_sigma
+        float row_min
+        float row_max
+        float col_min
+        float col_max
+        float bkgd
+        float noise
+        float son       
+
+#------------------------------
+
+cdef class py_peak :
+    cdef Peak* cptr  # holds a C++ pointer to instance
+
+    def __cinit__(self, _make_obj=True):
+        #print "In py_peak.__cinit__"
+        if _make_obj:
+            self.cptr = new Peak()
+
+    def __dealloc__(self):
+        #print "In py_peak.__dealloc__"
+        if self.cptr is not NULL :
+            del self.cptr
+            self.cptr = NULL
+
+
+    # https://groups.google.com/forum/#!topic/cython-users/39Nwqsksdto
+    @staticmethod
+    cdef factory(Peak cpp_obj):
+        py_obj = py_peak.__new__(py_peak, _make_obj=False)
+        (<py_peak> py_obj).cptr = new Peak(cpp_obj) # C++ copy constructor
+        return py_obj
+
+
+#    @staticmethod
+#    cdef factory(Peak cpp_obj):
+#        return self.peak_pars(cpp_obj)
+
+
+    def peak_pars(self) : #, cpp_obj=None) : 
+        p = self.cptr     # if cpp_obj is None else <Peak*> &cpp_obj
+        return (p.seg, p.row, p.col, p.npix, p.npos, p.amp_max, p.amp_tot,\
+                p.row_cgrav, p.col_cgrav, p.row_sigma, p.col_sigma,\
+                p.row_min, p.row_max, p.col_min, p.col_max, p.bkgd, p.noise, p.son)
+
+    @property
+    def seg      (self) : return self.cptr.seg       
+
+    @property
+    def row      (self) : return self.cptr.row       
+
+    @property
+    def col      (self) : return self.cptr.col       
+
+    @property
+    def npix     (self) : return self.cptr.npix      
+
+    @property
+    def npos     (self) : return self.cptr.npos      
+
+    @property
+    def amp_max  (self) : return self.cptr.amp_max   
+
+    @property
+    def amp_tot  (self) : return self.cptr.amp_tot   
+
+    @property
+    def row_cgrav(self) : return self.cptr.row_cgrav 
+
+    @property
+    def col_cgrav(self) : return self.cptr.col_cgrav 
+
+    @property
+    def row_sigma(self) : return self.cptr.row_sigma 
+
+    @property
+    def col_sigma(self) : return self.cptr.col_sigma 
+
+    @property
+    def row_min  (self) : return self.cptr.row_min   
+
+    @property
+    def row_max  (self) : return self.cptr.row_max   
+
+    @property
+    def col_min  (self) : return self.cptr.col_min   
+
+    @property
+    def col_max  (self) : return self.cptr.col_max   
+
+    @property
+    def bkgd     (self) : return self.cptr.bkgd      
+
+    @property
+    def noise    (self) : return self.cptr.noise     
+
+    @property
+    def son      (self) : return self.cptr.son       
 
 #------------------------------
 #------------------------------
@@ -158,6 +281,22 @@ cdef extern from "psalgos/PeakFinderAlgos.h" namespace "psalgos":
 	                       ,const double& dr
 	                       ,const double& nsigm)
 
+         const Peak& peak(const int& i)
+
+         const Peak& peakSelected(const int& i)
+
+         const vector[Peak]& vectorOfPeaks()
+
+         const vector[Peak]& vectorOfPeaksSelected()
+
+         void localMaxima    (uint16_t *arr2d, const size_t& rows, const size_t& cols)
+
+         void localMinima    (uint16_t *arr2d, const size_t& rows, const size_t& cols)
+
+         void connectedPixels(uint32_t *arr2d, const size_t& rows, const size_t& cols)
+
+         void pixelStatus    (uint16_t *arr2d, const size_t& rows, const size_t& cols)
+ 
 #------------------------------
 
 cdef class peak_finder_algos :
@@ -165,12 +304,14 @@ cdef class peak_finder_algos :
     """
     cdef PeakFinderAlgos* cptr  # holds a C++ pointer to instance
 
+    cdef uint16_t rows, cols
+
     def __cinit__(self, seg=0, pbits=0):
         #print "In peak_finder_algos.__cinit__"
         self.cptr = new PeakFinderAlgos(seg, pbits)
 
     def __dealloc__(self):
-        #print "In py_hit_class.__dealloc__"
+        #print "In peak_finder_algos.__dealloc__"
         del self.cptr
 
 
@@ -191,6 +332,53 @@ cdef class peak_finder_algos :
                         ,const double& dr\
                         ,const double& nsigm) :
         self.cptr.peakFinderV3r3(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, r0, dr, nsigm)
+        self.rows = data.shape[0]
+        self.cols = data.shape[1]
+
+
+    def peak(self, int i=0) : return py_peak.factory(self.cptr.peak(i))
+
+
+    def peak_selected(self, int i=0) : return py_peak.factory(self.cptr.peakSelected(i))
+
+
+    def list_of_peaks(self) :
+        cdef vector[Peak] peaks = self.cptr.vectorOfPeaks()	
+        return [py_peak.factory(p) for p in peaks]
+
+
+    def list_of_peaks_selected(self) :
+        cdef vector[Peak] peaks = self.cptr.vectorOfPeaksSelected()
+        return [py_peak.factory(p) for p in peaks]
+
+
+    def local_maxima(self) :
+        sh = (self.rows, self.cols)
+        cdef np.ndarray[np.uint16_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
+        self.cptr.localMaxima(&arr2d[0,0], self.rows, self.cols)
+        return arr2d
+
+
+    def local_minima(self) :
+        sh = (self.rows, self.cols)
+        cdef np.ndarray[np.uint16_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
+        self.cptr.localMinima(&arr2d[0,0], self.rows, self.cols)
+        return arr2d
+
+
+    def connected_pixels(self) :
+        sh = (self.rows, self.cols)
+        cdef np.ndarray[np.uint32_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint32))
+        self.cptr.connectedPixels(&arr2d[0,0], self.rows, self.cols)
+        return arr2d
+
+
+    def pixel_status(self) :
+        sh = (self.rows, self.cols)
+        cdef np.ndarray[np.uint16_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
+        self.cptr.pixelStatus(&arr2d[0,0], self.rows, self.cols)
+        return arr2d
+
 
 #    @property
 #    def r0(self) : return self.cptr.m_r0
