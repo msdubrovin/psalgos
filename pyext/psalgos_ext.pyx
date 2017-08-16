@@ -28,8 +28,19 @@ cdef extern from "<stdint.h>" nogil:
     ctypedef unsigned int   uint32_t
     ctypedef unsigned long  uint64_t
 
+# DOES NOT WORK:
+#cdef extern from "psalgos/Types.h" namespace "types":
+#    ctypedef shape_t      shape_t
+#    ctypedef mask_t       mask_t
+#    ctypedef extrim_t     extrim_t
+#    ctypedef pixstatus_t  pixstatus_t
+#    ctypedef conmap_t     conmap_t    
 
-# ctypedef uint16_t mask_t
+ctypedef unsigned shape_t
+ctypedef uint16_t mask_t
+ctypedef uint16_t extrim_t
+ctypedef uint16_t pixstatus_t
+ctypedef uint32_t conmap_t
 
 #------------------------------
 
@@ -39,8 +50,8 @@ import numpy as np
 #------------------------------
 
 ctypedef fused nptype2d :
-    np.ndarray[np.double_t,  ndim=2, mode="c"]
     np.ndarray[np.float64_t, ndim=2, mode="c"]
+    np.ndarray[np.float32_t, ndim=2, mode="c"]
     np.ndarray[np.int16_t,   ndim=2, mode="c"]
     np.ndarray[np.int32_t,   ndim=2, mode="c"]
     np.ndarray[np.int64_t,   ndim=2, mode="c"]
@@ -82,51 +93,53 @@ def test_nda_v1(nptype2d nda): ctest_nda(&nda[0,0], nda.shape[0], nda.shape[1])
 cdef extern from "psalgos/LocalExtrema.h" namespace "localextrema":
 
     void mapOfLocalMinimums[T](const T *data
-                              , const uint16_t *mask
-                              , const size_t& rows
-                              , const size_t& cols
-                              , const size_t& rank
-                              , uint16_t *arr2d
+                              ,const mask_t *mask
+                              ,const size_t& rows
+                              ,const size_t& cols
+                              ,const size_t& rank
+                              ,extrim_t *arr2d
                               )
 
     void mapOfLocalMaximums[T](const T *data
-                              , const uint16_t *mask
-                              , const size_t& rows
-                              , const size_t& cols
-                              , const size_t& rank
-                              , uint16_t *arr2d
+                              ,const mask_t *mask
+                              ,const size_t& rows
+                              ,const size_t& cols
+                              ,const size_t& rank
+                              ,extrim_t *arr2d
                               )
 
     void mapOfLocalMaximumsRank1Cross[T](const T *data
-                              , const uint16_t *mask
-                              , const size_t& rows
-                              , const size_t& cols
-                              , uint16_t *arr2d
-                              )
+                                        ,const mask_t *mask
+                                        ,const size_t& rows
+                                        ,const size_t& cols
+                                        ,extrim_t *arr2d
+                                        )
 
     void printMatrixOfDiagIndexes(const size_t& rank)
     void printVectorOfDiagIndexes(const size_t& rank)
 
 
-
 def local_minimums(nptype2d data,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] mask,\
+                   np.ndarray[mask_t, ndim=2, mode="c"] mask,\
                    int32_t rank,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] arr2d\
+                   np.ndarray[extrim_t, ndim=2, mode="c"] arr2d\
                   ): mapOfLocalMinimums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &arr2d[0,0])
 
+
 def local_maximums(nptype2d data,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] mask,\
+                   np.ndarray[mask_t, ndim=2, mode="c"] mask,\
                    int32_t rank,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] arr2d\
+                   np.ndarray[extrim_t, ndim=2, mode="c"] arr2d\
                   ): mapOfLocalMaximums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &arr2d[0,0])
 
+
 def local_maximums_rank1_cross(nptype2d data,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] mask,\
-                   np.ndarray[uint16_t, ndim=2, mode="c"] arr2d\
+                   np.ndarray[mask_t, ndim=2, mode="c"] mask,\
+                   np.ndarray[extrim_t, ndim=2, mode="c"] arr2d\
                   ): mapOfLocalMaximumsRank1Cross(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], &arr2d[0,0])
 
 def print_matrix_of_diag_indexes(int32_t& rank) : printMatrixOfDiagIndexes(rank)
+
 
 def print_vector_of_diag_indexes(int32_t& rank) : printVectorOfDiagIndexes(rank)
 
@@ -144,7 +157,7 @@ cdef extern from "psalgos/PeakFinderAlgos.h" namespace "psalgos":
         float row
         float col
         float npix
-        float npos
+        #float npos
         float amp_max
         float amp_tot
         float row_cgrav 
@@ -189,9 +202,9 @@ cdef class py_peak :
 #        return self.peak_pars(cpp_obj)
 
 
-    def peak_pars(self) : #, cpp_obj=None) : 
+    def parameters(self) : #, cpp_obj=None) : 
         p = self.cptr     # if cpp_obj is None else <Peak*> &cpp_obj
-        return (p.seg, p.row, p.col, p.npix, p.npos, p.amp_max, p.amp_tot,\
+        return (p.seg, p.row, p.col, p.npix, p.amp_max, p.amp_tot,\
                 p.row_cgrav, p.col_cgrav, p.row_sigma, p.col_sigma,\
                 p.row_min, p.row_max, p.col_min, p.col_max, p.bkgd, p.noise, p.son)
 
@@ -206,9 +219,6 @@ cdef class py_peak :
 
     @property
     def npix     (self) : return self.cptr.npix      
-
-    @property
-    def npos     (self) : return self.cptr.npos      
 
     @property
     def amp_max  (self) : return self.cptr.amp_max   
@@ -273,13 +283,15 @@ cdef extern from "psalgos/PeakFinderAlgos.h" namespace "psalgos":
 
 
          void peakFinderV3r3[T](const T *data
-                               ,const uint16_t *mask
+                               ,const mask_t *mask
                                ,const size_t& rows
                                ,const size_t& cols
                                ,const size_t& rank
 	                       ,const double& r0
 	                       ,const double& dr
 	                       ,const double& nsigm)
+
+         void printParameters();
 
          const Peak& peak(const int& i)
 
@@ -289,13 +301,13 @@ cdef extern from "psalgos/PeakFinderAlgos.h" namespace "psalgos":
 
          const vector[Peak]& vectorOfPeaksSelected()
 
-         void localMaxima    (uint16_t *arr2d, const size_t& rows, const size_t& cols)
+         void localMaxima    (extrim_t *arr2d, const size_t& rows, const size_t& cols)
 
-         void localMinima    (uint16_t *arr2d, const size_t& rows, const size_t& cols)
+         void localMinima    (extrim_t *arr2d, const size_t& rows, const size_t& cols)
 
-         void connectedPixels(uint32_t *arr2d, const size_t& rows, const size_t& cols)
+         void connectedPixels(conmap_t *arr2d, const size_t& rows, const size_t& cols)
 
-         void pixelStatus    (uint16_t *arr2d, const size_t& rows, const size_t& cols)
+         void pixelStatus    (pixstatus_t *arr2d, const size_t& rows, const size_t& cols)
  
 #------------------------------
 
@@ -324,27 +336,21 @@ cdef class peak_finder_algos :
         self.cptr.setPeakSelectionPars(npix_min, npix_max, amax_thr, atot_thr, son_min)
 
 
-    def peak_finder_v3r3(self\
-                        ,nptype2d data\
-                        ,np.ndarray[uint16_t, ndim=2, mode="c"] mask\
-                        ,const size_t& rank\
-                        ,const double& r0\
-                        ,const double& dr\
-                        ,const double& nsigm) :
+    def print_attributes(self) : self.cptr.printParameters()
+
+
+    def peak_finder_v3r3_d2(self\
+                           ,nptype2d data\
+                           ,np.ndarray[mask_t, ndim=2, mode="c"] mask\
+                           ,const size_t& rank\
+                           ,const double& r0\
+                           ,const double& dr\
+                           ,const double& nsigm) :
         self.cptr.peakFinderV3r3(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, r0, dr, nsigm)
         self.rows = data.shape[0]
         self.cols = data.shape[1]
 
-
-    def peak(self, int i=0) : return py_peak.factory(self.cptr.peak(i))
-
-
-    def peak_selected(self, int i=0) : return py_peak.factory(self.cptr.peakSelected(i))
-
-
-    def list_of_peaks(self) :
-        cdef vector[Peak] peaks = self.cptr.vectorOfPeaks()	
-        return [py_peak.factory(p) for p in peaks]
+        return self.list_of_peaks_selected()
 
 
     def list_of_peaks_selected(self) :
@@ -352,30 +358,43 @@ cdef class peak_finder_algos :
         return [py_peak.factory(p) for p in peaks]
 
 
+    def list_of_peaks(self) :
+        cdef vector[Peak] peaks = self.cptr.vectorOfPeaks()	
+        return [py_peak.factory(p) for p in peaks]
+
+
+    def peak(self, int i=0) : 
+        return py_peak.factory(self.cptr.peak(i))
+
+
+    def peak_selected(self, int i=0) : 
+        return py_peak.factory(self.cptr.peakSelected(i))
+
+
     def local_maxima(self) :
         sh = (self.rows, self.cols)
-        cdef np.ndarray[np.uint16_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
+        cdef np.ndarray[extrim_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
         self.cptr.localMaxima(&arr2d[0,0], self.rows, self.cols)
         return arr2d
 
 
     def local_minima(self) :
         sh = (self.rows, self.cols)
-        cdef np.ndarray[np.uint16_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
+        cdef np.ndarray[extrim_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
         self.cptr.localMinima(&arr2d[0,0], self.rows, self.cols)
         return arr2d
 
 
     def connected_pixels(self) :
         sh = (self.rows, self.cols)
-        cdef np.ndarray[np.uint32_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint32))
+        cdef np.ndarray[conmap_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint32))
         self.cptr.connectedPixels(&arr2d[0,0], self.rows, self.cols)
         return arr2d
 
 
     def pixel_status(self) :
         sh = (self.rows, self.cols)
-        cdef np.ndarray[np.uint16_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
+        cdef np.ndarray[pixstatus_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
         self.cptr.pixelStatus(&arr2d[0,0], self.rows, self.cols)
         return arr2d
 

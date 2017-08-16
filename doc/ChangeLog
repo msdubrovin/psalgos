@@ -11,6 +11,19 @@ Package author: Mikhail S. Dubrovin
 Please describe any modifications that you made to the package in the
 reverse time order.
 
+Tag: V00-00-04
+2017-08-15 Mikhail S. Dubrovin
+- add peakfinders etc in pypsalgos.py and examples
+
+modified:
+examples/ex-03-peakfinder.py
+examples/ex-04-pf-graph.py
+examples/ex-05-pf-on-data.py
+examples/ex_template.py
+pyext/psalgos_ext.pyx
+src/__init__.py
+src/pypsalgos.py
+
 Tag: V00-00-03
 2017-08-12 Mikhail S. Dubrovin
 - work in progress on peakfinder_v3r3

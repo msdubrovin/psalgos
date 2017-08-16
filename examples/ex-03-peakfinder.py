@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #------------------------------
 
-from psalgos.pypsalgos import peak_finder_v3r3 # import * 
+from psalgos.pypsalgos import peaks_adaptive # import * 
 from time import time
 
 #------------------------------
@@ -33,9 +33,9 @@ def test_pfv3r3(tname):
     print_ndarr(mask, 'input mask')
 
     t0_sec = time()
-    peaks = peak_finder_v3r3(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=3,\
+    peaks = peaks_adaptive(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=3,\
                              npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
-    print 'peak_finder_v3r3: img.shape=%s consumed time = %.6f(sec)' % (str(sh), time()-t0_sec)
+    print 'peaks_adaptive: img.shape=%s consumed time = %.6f(sec)' % (str(sh), time()-t0_sec)
 
     for p in peaks : 
         #print dir(p)

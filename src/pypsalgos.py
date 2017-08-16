@@ -3,22 +3,16 @@
 
 import psalgos
 import numpy as np
-from time import time
 
-from pyimgalgos.GlobalUtils import print_ndarr
-
+#from pyimgalgos.GlobalUtils import print_ndarr
 
 """Class provides access to C++ algorithms from python.
 
 Usage::
-
-    # !!! None is returned whenever requested information is missing.
-
-    # IMPORT
-    # ======
+    # IMPORT MISC
+    # ===========
     import numpy as np
     from pyimgalgos.GlobalUtils import print_ndarr
-
 
     # INPUT PARAMETERS
     # ================
@@ -36,43 +30,41 @@ Usage::
 
     import psalgos
 
-    o = psalgos.peak_finder_algos(seg=0, pbits=0)
-    o.set_peak_selection_parameters(npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=6)
+    alg = psalgos.peak_finder_algos(seg=0, pbits=0)
+    alg.set_peak_selection_parameters(npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=6)
 
-    o.peak_finder_v3r3(data, mask, rank=5, r0=7, dr=2, nsigm=5)
+    peaks = alg.peak_finder_v3r3_d2(data, mask, rank=5, r0=7, dr=2, nsigm=5)
 
-    p = o.peak_selected(0)
-    peaks_all = o.list_of_peaks()
-    peaks = o.list_of_peaks_selected()
+    peaks = alg.list_of_peaks_selected()
+    peaks_all = alg.list_of_peaks()
 
-    #print 'peak[0]: seg, row, col, npix, son :\n', p.seg, p.row, p.col, p.npix, p.son 
-    #for p in peaks : print '  row:%4d, col:%4d, npix:%4d, son::%4.1f' % (p.row, p.col, p.npix, p.son)
-    #for p in peaks : print p.peak_pars()
+    p = algo.peak(0)
+    p = algo.peak_selected(0)
 
-    map_u2 = np.empty(shape, dtype=np.uint16)
-    map_u4 = np.empty(shape, dtype=np.uint32)
+    for p in peaks : print '  row:%4d, col:%4d, npix:%4d, son::%4.1f' % (p.row, p.col, p.npix, p.son)
+    for p in peaks : print p.parameters()
 
-    o.local_maxima(map_u2)
-    o.local_minima(map_u2)
-    o.connected_pixels(map_u4)
-
-    #o.pixel_status(map_u4) # NOT USED in v3r3
+    map_u2 = alg.local_maxima()
+    map_u2 = alg.local_minima()
+    map_u4 = alg.connected_pixels()
+    #map_u2 = alg.pixel_status() # NOT USED in v3r3
 
 
-    # WRAPPERS FOR PEAKFINDERS
-    # ========================
+    # DIRECT CALL PEAKFINDERS
+    # =======================
 
-    from psalgos.pypsalgos import peak_finder_v3r3, peak_finder_v3r3_2d
+    from psalgos.pypsalgos import peaks_adaptive, peaks_adaptive_2d
 
-    peak_finder_v3r3_2d(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=5,\
-                        seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
+    # data and mask are 2-d numpy arrays of the same shape    
+    peaks = peaks_adaptive_2d(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=5,\
+                              seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
 
     # data and mask are N-d numpy arrays or list of 2-d numpy arrays of the same shape    
-    peaks = peak_finder_v3r3(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=3,\
-                             npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
+    peaks = peaks_adaptive(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=3,\
+                           npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
 
+    peak_pars = list_of_peak_parameters(peaks)
 """
-
 
 #------------------------------
 
@@ -137,32 +129,46 @@ def print_vector_of_diag_indexes(rank=5) : psalgos.print_vector_of_diag_indexes(
 
 #------------------------------
 
-def peak_finder_v3r3(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=5,\
+def peaks_adaptive(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=5,\
                      npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
-    """ data and mask are N-d numpy arrays or list of 2-d numpy arrays of the same shape
+    """Wrapper for liast of 2-d arrays or >2-d arrays 
+       data and mask are N-d numpy arrays or list of 2-d numpy arrays of the same shape
     """
     if isinstance(data, list) :
-        #raise IOError('pypsalgos.peak_finder_v3r3: TBD:  data is list')
         peaks=[]
-        for seg, (d2d, m2d) in enumerate(zip(data,mask)) :
-            peaks += peak_finder_v3r3_2d(d2d, m2d, rank, r0, dr, nsigm,\
-                                         seg, npix_min, npix_max, amax_thr, atot_thr, son_min)
+        if mask is None :
+            for seg, d2d in enumerate(data) :
+                peaks += peaks_adaptive_2d(d2d, mask, rank, r0, dr, nsigm,\
+                                           seg, npix_min, npix_max, amax_thr, atot_thr, son_min)
+        else :
+            for seg, (d2d, m2d) in enumerate(zip(data,mask)) :
+                peaks += peaks_adaptive_2d(d2d, m2d, rank, r0, dr, nsigm,\
+                                           seg, npix_min, npix_max, amax_thr, atot_thr, son_min)
         return peaks
 
     elif isinstance(data, np.ndarray) :
         if data.ndim==2 :
             seg=0
-            return peak_finder_v3r3_2d(data, mask, rank, r0, dr, nsigm,\
-                               seg, npix_min, npix_max, amax_thr, atot_thr, son_min)
+            return peaks_adaptive_2d(data, mask, rank, r0, dr, nsigm,\
+                                     seg, npix_min, npix_max, amax_thr, atot_thr, son_min)
 
         elif data.ndim>2 :
             shape_in = data.shape
-            data.shape = mask.shape = shape_as_3d(shape_in)
+            data.shape = shape_as_3d(shape_in)
             peaks=[]
-            for seg in range(data.shape[0]) :
-                peaks += peak_finder_v3r3_2d(data[seg,:,:], mask[seg,:,:], rank, r0, dr, nsigm,\
-                                             seg, npix_min, npix_max, amax_thr, atot_thr, son_min)
-            data.shape = mask.shape = shape_in
+            if mask is None :
+                _mask = np.ones((data_in[-2], data_in[-1]), dtype=np.uint16)
+                for seg in range(data.shape[0]) :
+                    peaks += peaks_adaptive_2d(data[seg,:,:], _mask, rank, r0, dr, nsigm,\
+                                               seg, npix_min, npix_max, amax_thr, atot_thr, son_min)
+            else :
+                mask.shape = data.shape
+                for seg in range(data.shape[0]) :
+                    peaks += peaks_adaptive_2d(data[seg,:,:], mask[seg,:,:], rank, r0, dr, nsigm,\
+                                               seg, npix_min, npix_max, amax_thr, atot_thr, son_min)
+
+                mask.shape = shape_in
+            data.shape = shape_in
             return peaks
 
         else : raise IOError('pypsalgos.peak_finder_v3r3: wrong data.ndim %s' % str(data.ndim))
@@ -176,36 +182,35 @@ def peak_finder_alg_2d(seg=0, pbits=0) :
 
 #------------------------------
 
-def peak_finder_v3r3_2d(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=5,\
-                        seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
-    """ data and mask are 2-d numpy arrays of the same shape
+def peaks_adaptive_2d(data, mask=None, rank=5, r0=7.0, dr=2.0, nsigm=5,\
+                      seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
+    """ peak finder for 2-d numpy arrays of data and mask of the same shape
     """
+    #from time import time
+
     #t0_sec = time()
     # pbits NONE=0, DEBUG=1, INFO=2, WARNING=4, ERROR=8, CRITICAL=16
+
     o = psalgos.peak_finder_algos(seg, pbits=0) #377) # ~17 microsecond
     _npix_max = npix_max if npix_max is not None else (2*rank+1)*(2*rank+1)
     o.set_peak_selection_parameters(npix_min, _npix_max, amax_thr, atot_thr, son_min)
-    o.peak_finder_v3r3(data, mask, rank, r0, dr, nsigm)
-    #print 'peak_finder_v3r3: total time = %.6f(sec)' % (time()-t0_sec)
+    _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
 
-    #p = o.peak()
-    #p = o.peak_selected()
-    #peaks = o.list_of_peaks_selected()
+    peaks = o.peak_finder_v3r3_d2(data, _mask, rank, r0, dr, nsigm)
 
-    #print 'peak[0]: seg, row, col, npix, son :\n', p.seg, p.row, p.col, p.npix, p.son 
-    #for p in peaks : print '  row:%4d, col:%4d, npix:%4d, son::%4.1f' % (p.row, p.col, p.npix, p.son)
-    #for p in peaks : print p.peak_pars()
+    #print 'peak_finder_v3r3_d2: total time = %.6f(sec)' % (time()-t0_sec)
+    #print_ndarr(data,'XXX:data')
+    #print_ndarr(_mask,'XXX:_mask')
 
-
-    #loc_max = o.local_maxima() ### DOES NOT WORK
-    #print 'local_maxima()\n', loc_max
-    print_ndarr(o.local_maxima(), 'local_maxima()', last=30)
-    print_ndarr(o.local_minima(), 'local_minima()', last=30)
-    #print_ndarr(o.connected_pixels(), 'connected_pixels()', last=500)
-
-    return o.list_of_peaks_selected()
+    return peaks # or o.list_of_peaks_selected()
 
 #------------------------------
+
+def list_of_peak_parameters(peaks) :
+    """Converts list of peak objects to the (old style) list of peak parameters.
+    """    
+    return [p.parameters() for p in peaks]
+
 #------------------------------
 
 if __name__ == "__main__" :
