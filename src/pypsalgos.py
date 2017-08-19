@@ -47,17 +47,25 @@ Usage::
     map_u2 = alg.local_maxima()
     map_u2 = alg.local_minima()
     map_u4 = alg.connected_pixels()
-    #map_u2 = alg.pixel_status() # NOT USED in v3r3
 
+    import psalgos.pypsalgos as algos
+
+    n = algos.local_minima_2d(data, mask, rank, extrema) # 0.019(sec) for shape=(1000, 1000) on psanaphi110
+    n = algos.local_maxima_2d(data, mask, rank, extrema) # 0.019(sec)
+    n = algos.local_maxima_rank1_cross_2d(data, mask, extrema) # 0.014(sec)
+    n = algos.threshold_maxima_2d(data, mask, rank, thr_low, thr_high, extrema) # 0.0017(sec)
 
     # DIRECT CALL PEAKFINDERS
     # =======================
 
-    from psalgos.pypsalgos import peaks_adaptive, peaks_adaptive_2d
+    from psalgos.pypsalgos import peaks_adaptive, peaks_adaptive_2d, peaks_droplet_2d
 
     # data and mask are 2-d numpy arrays of the same shape    
     peaks = peaks_adaptive_2d(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=5,\
                               seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
+
+    peaks = peaks_droplet_2d(data, mask=None, thr_low, thr_high, rank=5, r0=7.0, dr=2.0,\
+                             seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
 
     # data and mask are N-d numpy arrays or list of 2-d numpy arrays of the same shape    
     peaks = peaks_adaptive(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=3,\
@@ -100,24 +108,39 @@ def reshape_to_3d(arr) :
 
 #------------------------------
 
-def local_minimums_2d(data, mask=None, rank=3, extrema=None) :
+def local_minima_2d(data, mask=None, rank=3, extrema=None) :
     if extrema is None : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
-    psalgos.local_minimums(data, _mask, rank, extrema)
+    return psalgos.local_minimums(data, _mask, rank, extrema)
+
+local_minimums_2d = local_minima_2d
 
 #------------------------------
 
-def local_maximums_2d(data, mask=None, rank=3, extrema=None) :
+def local_maxima_2d(data, mask=None, rank=3, extrema=None) :
     if extrema is None : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
-    psalgos.local_maximums(data, _mask, rank, extrema)
+    return psalgos.local_maximums(data, _mask, rank, extrema)
+
+local_maximums_2d = local_maxima_2d
 
 #------------------------------
 
-def local_maximums_rank1_cross_2d(data, mask=None, extrema=None) :
+def local_maxima_rank1_cross_2d(data, mask=None, extrema=None) :
     if extrema is None : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
-    psalgos.local_maximums_rank1_cross(data, _mask, extrema)
+    return psalgos.local_maximums_rank1_cross(data, _mask, extrema)
+
+local_maximums_rank1_cross_2d = local_maxima_rank1_cross_2d
+
+#------------------------------
+
+def threshold_maxima_2d(data, mask=None, rank=3, thr_low=None, thr_high=None, extrema=None) :
+    if (thr_low is None) or (thr_high is None) or (extrema is None) : return
+    _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
+    return psalgos.threshold_maximums(data, _mask, rank, thr_low, thr_high, extrema)
+
+threshold_maximums_2d = threshold_maxima_2d
 
 #------------------------------
 
@@ -197,6 +220,32 @@ def peaks_adaptive_2d(data, mask=None, rank=5, r0=7.0, dr=2.0, nsigm=5,\
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
 
     peaks = o.peak_finder_v3r3_d2(data, _mask, rank, r0, dr, nsigm)
+
+    #print 'peak_finder_v3r3_d2: total time = %.6f(sec)' % (time()-t0_sec)
+    #print_ndarr(data,'XXX:data')
+    #print_ndarr(_mask,'XXX:_mask')
+
+    return peaks # or o.list_of_peaks_selected()
+
+#------------------------------
+
+def peaks_droplet_2d(data, mask=None, thr_low=None, thr_high=None, rank=5, r0=7.0, dr=2.0,\
+                     seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
+    """ peak finder for 2-d numpy arrays of data and mask of the same shape
+    """
+    #from time import time
+
+    #t0_sec = time()
+    # pbits NONE=0, DEBUG=1, INFO=2, WARNING=4, ERROR=8, CRITICAL=16
+
+    if None in (thr_low, thr_high) : return None
+
+    o = psalgos.peak_finder_algos(seg, pbits=0) #377) # ~17 microsecond
+    _npix_max = npix_max if npix_max is not None else (2*rank+1)*(2*rank+1)
+    o.set_peak_selection_parameters(npix_min, _npix_max, amax_thr, atot_thr, son_min)
+    _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
+
+    peaks = o.peak_finder_v4r3_d2(data, _mask, thr_low, thr_high, rank, r0, dr)
 
     #print 'peak_finder_v3r3_d2: total time = %.6f(sec)' % (time()-t0_sec)
     #print_ndarr(data,'XXX:data')

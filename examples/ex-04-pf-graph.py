@@ -19,11 +19,12 @@ def plot_image(img, img_range=None, amp_range=None, figsize=(12,10)) :
 
 #------------------------------
 
-def image_with_random_peaks(shape=(1000, 1000)) : 
+def image_with_random_peaks(shape=(1000, 1000), add_water_ring=True) : 
     img = random_standard(shape, mu=0, sigma=10)
-    rad = 0.3*shape[0]
-    sigm = rad/4
-    add_ring(img, amp=20, row=shape[0]/2, col=shape[1]/2, rad=rad, sigma=sigm)
+    if add_water_ring : 
+        rad = 0.3*shape[0]
+        sigm = rad/4
+        add_ring(img, amp=20, row=shape[0]/2, col=shape[1]/2, rad=rad, sigma=sigm)
     peaks = add_random_peaks(img, npeaks=50, amean=100, arms=25, wmean=1.5, wrms=0.3)
     return img, peaks
 
@@ -58,12 +59,11 @@ def test_pf(tname) :
     EVTMAX = 5 + SKIP
 
     DO_PLOT_IMAGE           = True
-    DO_PLOT_PIXEL_STATUS    = True if PF in (V2,V4) else False
     DO_PLOT_CONNECED_PIXELS = True if PF in (V2,V3,V4) else False
-    DO_PLOT_LOCAL_MAXIMUMS  = True if PF == V3 else False
+    DO_PLOT_LOCAL_MAXIMUMS  = True if PF in (V3,V4) else False
     DO_PLOT_LOCAL_MINIMUMS  = True if PF == V3 else False
 
-    shape=(1000, 1000)
+    shape=(500, 500)
 
     mask = np.ones(shape, dtype=np.uint16)
 
@@ -80,7 +80,6 @@ def test_pf(tname) :
     fig5, axim5, axcb5, imsh5 = gg.fig_axim_axcb_imsh(figsize=fs) if DO_PLOT_LOCAL_MINIMUMS  else (None, None, None, None)
     fig4, axim4, axcb4, imsh4 = gg.fig_axim_axcb_imsh(figsize=fs) if DO_PLOT_LOCAL_MAXIMUMS  else (None, None, None, None)
     fig3, axim3, axcb3, imsh3 = gg.fig_axim_axcb_imsh(figsize=fs) if DO_PLOT_CONNECED_PIXELS else (None, None, None, None)
-    fig2, axim2, axcb2, imsh2 = gg.fig_axim_axcb_imsh(figsize=fs) if DO_PLOT_PIXEL_STATUS    else (None, None, None, None)
     fig1, axim1, axcb1, imsh1 = gg.fig_axim_axcb_imsh(figsize=fs) if DO_PLOT_IMAGE           else (None, None, None, None)
     ##-----------------------------
 
@@ -89,17 +88,16 @@ def test_pf(tname) :
 
 
     if   PF == V1 :
-      alg.set_peak_selection_pars(npix_min=0, npix_max=1e6, amax_thr=0, atot_thr=0, son_min=6)
+      alg.set_peak_selection_parameters(npix_min=0, npix_max=1e6, amax_thr=0, atot_thr=0, son_min=6)
 
     elif PF == V2 :
-      alg.set_peak_selection_pars(npix_min=0, npix_max=1e6, amax_thr=0, atot_thr=0, son_min=6)
+      alg.set_peak_selection_parameters(npix_min=0, npix_max=1e6, amax_thr=0, atot_thr=0, son_min=6)
 
     elif PF == V3 :
-      #alg.set_peak_selection_pars(npix_min=0, npix_max=1e6, amax_thr=0, atot_thr=0, son_min=8)
       alg.set_peak_selection_parameters(npix_min=1, npix_max=1e6, amax_thr=0, atot_thr=0, son_min=8)
 
     elif PF == V4 :
-      alg.set_peak_selection_pars(npix_min=0, npix_max=1e6, amax_thr=0, atot_thr=0, son_min=6)
+      alg.set_peak_selection_parameters(npix_min=1, npix_max=1e6, amax_thr=0, atot_thr=0, son_min=4)
 
     alg.print_attributes()
 
@@ -111,7 +109,8 @@ def test_pf(tname) :
 
         print 50*'_', '\nEvent %04d' % ev1
 
-        img, peaks_sim = image_with_random_peaks(shape)
+        add_water_ring = False if PF == V4 else True
+        img, peaks_sim = image_with_random_peaks(shape, add_water_ring)
 
         # --- for debugging
         #np.save('xxx-image', img) 
@@ -125,7 +124,9 @@ def test_pf(tname) :
 
         t0_sec = time()
 
-        peaks = alg.peak_finder_v3r3_d2(img, mask, rank=4, r0=6, dr=3, nsigm=3)
+        peaks = alg.peak_finder_v3r3_d2(img, mask, rank=4, r0=6, dr=3, nsigm=3) if PF == V3 else\
+                alg.peak_finder_v4r3_d2(img, mask, thr_low=20, thr_high=40, rank=4, r0=5, dr=3)
+
         #peaks = alg.list_of_peaks_selected()
         #peaks_tot = alg.list_of_peaks()
 
@@ -135,36 +136,32 @@ def test_pf(tname) :
 #                alg.peak_finder_v4r2(img, thr_low=20, thr_high=40, rank=6, r0=7, dr=2)
 #                #alg.peak_finder_v4r2(img, thr_low=20, thr_high=40, rank=6, r0=3.3, dr=0)
 
-        print '  Time consumed by the peak_finder = %10.6f(sec)' % (time()-t0_sec)
+        print 'Time consumed by the peak_finder = %10.6f(sec) number of simulated/found peaks: %d/%d'%\
+              (time()-t0_sec, len(peaks_sim), len(peaks))
 
-        #map2 = reshape_to_2d(alg.maps_of_pixel_status())     if DO_PLOT_PIXEL_STATUS    else None # np.zeros((10,10))
         #map3 = reshape_to_2d(alg.maps_of_connected_pixels()) if DO_PLOT_CONNECED_PIXELS else None # np.zeros((10,10))
         #map4 = reshape_to_2d(alg.maps_of_local_maximums())   if DO_PLOT_LOCAL_MAXIMUMS  else None # np.zeros((10,10))
         #map5 = reshape_to_2d(alg.maps_of_local_minimums())   if DO_PLOT_LOCAL_MINIMUMS  else None # np.zeros((10,10))
 
-        map2 = reshape_to_2d(alg.pixel_status())     if DO_PLOT_PIXEL_STATUS    else None # np.zeros((10,10))
         map3 = reshape_to_2d(alg.connected_pixels()) if DO_PLOT_CONNECED_PIXELS else None # np.zeros((10,10))
         map4 = reshape_to_2d(alg.local_maxima())     if DO_PLOT_LOCAL_MAXIMUMS  else None # np.zeros((10,10))
         map5 = reshape_to_2d(alg.local_minima())     if DO_PLOT_LOCAL_MINIMUMS  else None # np.zeros((10,10))
 
-        print 'arrays are extracted'
-
-        #print_arr(map2, 'map_of_pixel_status')
         #print_arr(map3, 'map_of_connected_pixels')
         #maps.shape = shape 
 
-
-        print 'Simulated peaks:'
-        for i, (r0, c0, a0, sigma) in enumerate(peaks_sim) :
-            print '  %04d  row=%6.1f  col=%6.1f  amp=%6.1f  sigma=%6.3f' % (i, r0, c0, a0, sigma)
+        #for i, (r0, c0, a0, sigma) in enumerate(peaks_sim) :
+        #    print '  %04d  row=%6.1f  col=%6.1f  amp=%6.1f  sigma=%6.3f' % (i, r0, c0, a0, sigma)
         #plot_image(img)
 
-        print 'Found peaks:'
-        print hdr
+        #print 'Found peaks:'
+        #print hdr
         reg = 'IMG'
 
         peaks_rec = []
-        for pk in peaks :
+
+        if False :
+          for pk in peaks :
             seg,row,col,npix,amax,atot,rcent,ccent,rsigma,csigma,\
             rmin,rmax,cmin,cmax,bkgd,rms,son = pk.parameters()
             #rmin,rmax,cmin,cmax,bkgd,rms,son = pk[0:17]
@@ -178,14 +175,10 @@ def test_pf(tname) :
         #peaks_rec = [(p.seg, p.row, p.col, p.amp_max, p.amp_tot, p.npix) for p in peaks]
         #s, r, c, amax, atot, npix = rec[0:6]
 
-        if DO_PLOT_PIXEL_STATUS :
-            gg.plot_imgcb(fig2, axim2, axcb2, imsh2, map2, amin=0, amax=30, title='Pixel status, ev: %04d' % ev1)
-            gg.move_fig(fig2, x0=0, y0=30)
-
 
         if DO_PLOT_CONNECED_PIXELS :
             cmin, cmax = (map3.min(), map3.max()) if map3 is not None else (None,None)
-            print 'Connected pixel groups min/max:', cmin, cmax
+            #print 'Connected pixel groups min/max:', cmin, cmax
             gg.plot_imgcb(fig3, axim3, axcb3, imsh3, map3, amin=cmin, amax=cmax, title='Connected pixel groups, ev: %04d' % ev1)
             gg.move_fig(fig3, x0=100, y0=30)
 
@@ -244,7 +237,7 @@ if __name__ == "__main__" :
     tname = sys.argv[1] if len(sys.argv) > 1 else '3'
     print 50*'_', '\nTest %s:' % tname
     if   tname == '0' : ex_image_with_random_peaks()
-    elif tname in ('3','3','3','3') : test_pf(tname)
+    elif tname in ('3','3','3','4') : test_pf(tname)
     else : print 'Not-recognized test name: %s' % tname
     sys.exit('End of test %s' % tname)
  

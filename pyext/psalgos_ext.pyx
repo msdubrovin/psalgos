@@ -33,13 +33,11 @@ cdef extern from "<stdint.h>" nogil:
 #    ctypedef shape_t      shape_t
 #    ctypedef mask_t       mask_t
 #    ctypedef extrim_t     extrim_t
-#    ctypedef pixstatus_t  pixstatus_t
 #    ctypedef conmap_t     conmap_t    
 
 ctypedef unsigned shape_t
 ctypedef uint16_t mask_t
 ctypedef uint16_t extrim_t
-ctypedef uint16_t pixstatus_t
 ctypedef uint32_t conmap_t
 
 #------------------------------
@@ -92,28 +90,38 @@ def test_nda_v1(nptype2d nda): ctest_nda(&nda[0,0], nda.shape[0], nda.shape[1])
 
 cdef extern from "psalgos/LocalExtrema.h" namespace "localextrema":
 
-    void mapOfLocalMinimums[T](const T *data
-                              ,const mask_t *mask
-                              ,const size_t& rows
-                              ,const size_t& cols
-                              ,const size_t& rank
-                              ,extrim_t *arr2d
-                              )
+    size_t mapOfLocalMinimums[T](const T *data
+                                ,const mask_t *mask
+                                ,const size_t& rows
+                                ,const size_t& cols
+                                ,const size_t& rank
+                                ,extrim_t *arr2d
+                                )
 
-    void mapOfLocalMaximums[T](const T *data
-                              ,const mask_t *mask
-                              ,const size_t& rows
-                              ,const size_t& cols
-                              ,const size_t& rank
-                              ,extrim_t *arr2d
-                              )
+    size_t mapOfLocalMaximums[T](const T *data
+                                ,const mask_t *mask
+                                ,const size_t& rows
+                                ,const size_t& cols
+                                ,const size_t& rank
+                                ,extrim_t *arr2d
+                                )
 
-    void mapOfLocalMaximumsRank1Cross[T](const T *data
-                                        ,const mask_t *mask
-                                        ,const size_t& rows
-                                        ,const size_t& cols
-                                        ,extrim_t *arr2d
-                                        )
+    size_t mapOfLocalMaximumsRank1Cross[T](const T *data
+                                          ,const mask_t *mask
+                                          ,const size_t& rows
+                                          ,const size_t& cols
+                                          ,extrim_t *arr2d
+                                          )
+
+    size_t mapOfThresholdMaximums[T](const T *data
+                                    ,const mask_t *mask
+                                    ,const size_t& rows
+                                    ,const size_t& cols
+                                    ,const size_t& rank
+		                    ,const double& thr_low 
+		                    ,const double& thr_high 
+                                    ,extrim_t *arr2d
+                                    )
 
     void printMatrixOfDiagIndexes(const size_t& rank)
     void printVectorOfDiagIndexes(const size_t& rank)
@@ -123,20 +131,34 @@ def local_minimums(nptype2d data,\
                    np.ndarray[mask_t, ndim=2, mode="c"] mask,\
                    int32_t rank,\
                    np.ndarray[extrim_t, ndim=2, mode="c"] arr2d\
-                  ): mapOfLocalMinimums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &arr2d[0,0])
+                  ): 
+    return mapOfLocalMinimums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &arr2d[0,0])
 
 
 def local_maximums(nptype2d data,\
                    np.ndarray[mask_t, ndim=2, mode="c"] mask,\
                    int32_t rank,\
                    np.ndarray[extrim_t, ndim=2, mode="c"] arr2d\
-                  ): mapOfLocalMaximums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &arr2d[0,0])
+                  ): 
+    return mapOfLocalMaximums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, &arr2d[0,0])
 
 
 def local_maximums_rank1_cross(nptype2d data,\
                    np.ndarray[mask_t, ndim=2, mode="c"] mask,\
                    np.ndarray[extrim_t, ndim=2, mode="c"] arr2d\
-                  ): mapOfLocalMaximumsRank1Cross(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], &arr2d[0,0])
+                  ): 
+    return mapOfLocalMaximumsRank1Cross(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], &arr2d[0,0])
+
+
+def threshold_maximums(nptype2d data,\
+                       np.ndarray[mask_t, ndim=2, mode="c"] mask,\
+                       int32_t rank,\
+                       double thr_low,\
+                       double thr_high,\
+                       np.ndarray[extrim_t, ndim=2, mode="c"] arr2d\
+                      ) : 
+    return mapOfThresholdMaximums(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, thr_low, thr_high, &arr2d[0,0])
+
 
 def print_matrix_of_diag_indexes(int32_t& rank) : printMatrixOfDiagIndexes(rank)
 
@@ -291,6 +313,17 @@ cdef extern from "psalgos/PeakFinderAlgos.h" namespace "psalgos":
 	                       ,const double& dr
 	                       ,const double& nsigm)
 
+         void peakFinderV4r3[T](const T *data
+                               ,const mask_t *mask
+                               ,const size_t& rows
+                               ,const size_t& cols
+                               ,const double& thr_low
+                               ,const double& thr_high
+                               ,const size_t& rank
+	                       ,const double& r0
+	                       ,const double& dr
+                               )
+ 
          void printParameters();
 
          const Peak& peak(const int& i)
@@ -307,8 +340,6 @@ cdef extern from "psalgos/PeakFinderAlgos.h" namespace "psalgos":
 
          void connectedPixels(conmap_t *arr2d, const size_t& rows, const size_t& cols)
 
-         void pixelStatus    (pixstatus_t *arr2d, const size_t& rows, const size_t& cols)
- 
 #------------------------------
 
 cdef class peak_finder_algos :
@@ -349,7 +380,20 @@ cdef class peak_finder_algos :
         self.cptr.peakFinderV3r3(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], rank, r0, dr, nsigm)
         self.rows = data.shape[0]
         self.cols = data.shape[1]
+        return self.list_of_peaks_selected()
 
+
+    def peak_finder_v4r3_d2(self\
+                           ,nptype2d data\
+                           ,np.ndarray[mask_t, ndim=2, mode="c"] mask\
+                           ,const double& thr_low
+                           ,const double& thr_high
+                           ,const size_t& rank\
+                           ,const double& r0\
+                           ,const double& dr) :
+        self.cptr.peakFinderV4r3(&data[0,0], &mask[0,0], data.shape[0], data.shape[1], thr_low, thr_high, rank, r0, dr)
+        self.rows = data.shape[0]
+        self.cols = data.shape[1]
         return self.list_of_peaks_selected()
 
 
@@ -391,12 +435,6 @@ cdef class peak_finder_algos :
         self.cptr.connectedPixels(&arr2d[0,0], self.rows, self.cols)
         return arr2d
 
-
-    def pixel_status(self) :
-        sh = (self.rows, self.cols)
-        cdef np.ndarray[pixstatus_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint16))
-        self.cptr.pixelStatus(&arr2d[0,0], self.rows, self.cols)
-        return arr2d
 
 
 #    @property

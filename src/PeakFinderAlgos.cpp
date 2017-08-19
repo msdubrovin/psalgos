@@ -23,7 +23,6 @@ PeakFinderAlgos::PeakFinderAlgos(const size_t& seg, const unsigned& pbits)
   , m_pbits(pbits)
   , m_local_maxima(0)
   , m_local_minima(0)
-  , m_pixel_status(0)
   , m_conmap(0)
   , m_peak_npix_min(0)
   , m_peak_npix_max(1e6)
@@ -42,7 +41,6 @@ PeakFinderAlgos::~PeakFinderAlgos()
   if(m_pbits & LOG::DEBUG) std::cout << "in d-tor ~PeakFinderAlgos\n";
   if (m_local_maxima) delete[] m_local_maxima;
   if (m_local_minima) delete[] m_local_minima;
-  if (m_pixel_status) delete[] m_pixel_status;
   if (m_conmap)       delete[] m_conmap;
 }
 
@@ -64,6 +62,27 @@ PeakFinderAlgos::printParameters()
   ss << "img_size " << m_img_size << '\n';
   ss << "sizeof(extrim_t) " << sizeof(extrim_t) << '\n';
   cout << ss.str();
+}
+
+//-----------------------------
+
+void 
+PeakFinderAlgos::_initMapsAndVectors()
+{
+  if(m_pbits & LOG::DEBUG) std::cout << "in _initMapsAndVectors/n";
+
+  if (m_conmap==0) m_conmap = new conmap_t[m_img_size];
+  std::fill_n(m_conmap, int(m_img_size), conmap_t(0));
+
+  if(v_ind_pixgrp.capacity() != m_pixgrp_max_size) v_ind_pixgrp.reserve(m_pixgrp_max_size);
+
+  if(vv_peak_pixinds.capacity() < m_npksmax) vv_peak_pixinds.reserve(m_npksmax);
+     vv_peak_pixinds.clear();
+
+  if(v_peaks.capacity() < m_npksmax) v_peaks.reserve(m_npksmax);
+     v_peaks.clear();
+
+  _evaluateRingIndexes();
 }
 
 //-----------------------------
@@ -225,9 +244,6 @@ PeakFinderAlgos::_findConnectedPixelsInRegionVX(const T* data, const int& r, con
   if(! m_mask[irc]) return; // - masked
   if(m_conmap[irc]) return; // - pixel is already used
   if(data[irc] < (T)m_reg_thr) return; // discard pixel below threshold if m_reg_thr != 0 
-
-  //if(m_pixel_status(r,c) & 8) return; // pstat=4/8/16 : a<thr_low/used in recursion/used in map
-  //m_pixel_status(r,c) |= 8; // mark this pixel as used in this recursion to get rid of cycling  
 
   m_conmap[irc] = m_numreg; // mark pixel on map
 

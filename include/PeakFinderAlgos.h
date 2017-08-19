@@ -28,7 +28,6 @@ namespace psalgos {
 //-----------------------------
 typedef types::mask_t      mask_t;
 typedef types::extrim_t    extrim_t;
-typedef types::pixstatus_t pixstatus_t;
 typedef types::conmap_t    conmap_t;
 typedef types::TwoIndexes  TwoIndexes;
 //-----------------------------
@@ -207,30 +206,53 @@ operator<<(std::ostream& os, const RingAvgRms& b);
  *  @endcode
  *
  *
- *  @li Define input parameters
+ *  @li Define input parameters and make object
  *  \n
  *  @code
- *    const T *data = ...
- *    const mask_t *mask = ...
  *    const size_t rows = 1000;
  *    const size_t cols = 1000;
  *    const size_t rank = 5;
- *    extrim_t *map = ...
- *  @endcode
+ *    const T      *data  = new T[rows*cols];
+ *    const mask_t *mask  = new mask_t[rows*cols];
+ *    extrim_t     *arr2d = new extrim_t[rows*cols];
  *
+ *
+ *    const float npix_min=1;
+ *    const float npix_max=1e6;
+ *    const float amax_thr=0;
+ *    const float atot_thr=0;
+ *    const float son_min=0;
+ *    
+ *    const size_t seg=0;
+ *    const unsigned& pbits=0 # Types.h:  NONE=0, DEBUG=1, INFO=2, WARNING=4, ERROR=8, CRITICAL=16
+ *    PeakFinderAlgos* alg = new PeakFinderAlgos(cseg, pbits);
+ *  @endcode
  *
  *  @li Call methods
  *  \n
  *  @code
- *  //mapOfLocalMinimums(data, mask, rows, cols, rank, map);
- *  //mapOfLocalMaximums(data, mask, rows, cols, rank, map);
- *  //mapOfLocalMaximumsRank1Cross(data, mask, rows, cols, map);
- *
- *  //std::vector<TwoIndexes> v = evaluateDiagIndexes(const size_t& rank);
- *  //printMatrixOfDiagIndexes(rank);
- *  //printVectorOfDiagIndexes(rank);
-
- *  print Parameters();
+ *  alg.printParameters();
+ *  alg.printMatrixOfRingIndexes();
+ *  alg.printVectorOfRingIndexes();
+ *  alg.setPeakSelectionPars(npix_min, npix_max, amax_thr, atot_thr, son_min);
+ *  alg.printSelectionPars();
+ *  
+ *  alg.peakFinderV3r3<T>(data, mask, rows, cols, rank, r0, dr, nsigm);
+ *  
+ *  const Peak& p = alg.peak(i)
+ *  const Peak& p = alg.peakSelected(i)
+ *  const std::vector<Peak> peaks = alg.vectorOfPeaks();
+ *  const std::vector<Peak> peaks = alg.vectorOfPeaksSelected();
+ *  
+ *  alg.localMaxima(arr2d, rows, cols);
+ *  alg.localMinima(arr2d, rows, cols);
+ *  alg.connectedPixels(arr2d, rows, cols);
+ *  
+ *  
+ *  
+ *  
+ *  
+ *  
  *  @endcode
  */
 
@@ -243,25 +265,19 @@ public:
    * @brief Class constructor is used for initialization of all paramaters. 
    * 
    * @param[in] seg    - ROI segment index in the ndarray
-   * @param[in] pbits  - print control bit-word; =0-print nothing, +1-input parameters, +2-algorithm area, +128-all details.
-   * @param[in] npksmax - maximal number of reserved peak records.
+   * @param[in] pbits  - print control bit-word; =0-print nothing, =1 debug, =2 info, ...
    */
 
   //PeakFinderAlgos();
   PeakFinderAlgos(const size_t& seg=0, const unsigned& pbits=0);
 
-  /*
-  PeakFinderAlgos(const size_t& seg = 0
-	         ,const unsigned& pbits = 0
-	         ,const unsigned& npksmax = 80000
-	         );
-  */
-
   virtual ~PeakFinderAlgos();
-
 
   /// Prints memeber data
   void printParameters();
+
+  /// Initialaise maps and vectors per event; uses m_img_size, m_npksmax, vectors and maps
+  void _initMapsAndVectors();
 
   /// Evaluate ring indexes for S/N algorithm
   void _evaluateRingIndexes();
@@ -320,11 +336,6 @@ public:
     std::memcpy(map, m_conmap, rows*cols*sizeof(conmap_t)); 
   }
 
-  /// Fills-out (returns) array of m_pixel_status
-  void pixelStatus(pixstatus_t *map, const size_t& rows, const size_t& cols) {
-    std::memcpy(map, m_pixel_status, rows*cols*sizeof(pixstatus_t)); 
-  }
-
 private:
   size_t m_seg;      // segment index (for list of images)
   unsigned m_pbits;  // pirnt control bit-word
@@ -337,7 +348,12 @@ private:
   size_t m_img_size; // size of the image
   size_t m_pixgrp_max_size; // size of droplet vector
   size_t m_npksmax;
+  size_t m_nminima;
   conmap_t m_numreg;
+
+  float m_thr_low;
+  float m_thr_high;
+
 
   double m_reg_thr;  // threshold on intensity
   double m_reg_a0;   // intensity in the initial point for droplet
@@ -348,7 +364,6 @@ private:
 
   extrim_t    *m_local_maxima;
   extrim_t    *m_local_minima;
-  pixstatus_t *m_pixel_status;
   conmap_t    *m_conmap;
   const mask_t *m_mask;
 
@@ -413,17 +428,21 @@ peakFinderV3r3(const T *data
   //std::fill_n(m_local_minima, int(m_img_size), extrim_t(0));
   //std::fill_n(m_local_maxima, int(m_img_size), extrim_t(0));
 
-  localextrema::mapOfLocalMinimums<T>(data, mask, rows, cols, rank, m_local_minima); // fills m_local_minima
-  localextrema::mapOfLocalMaximums<T>(data, mask, rows, cols, rank, m_local_maxima); // fills m_local_maxima
+  m_nminima = localextrema::mapOfLocalMinimums<T>(data, mask, rows, cols, rank, m_local_minima); // fills m_local_minima
+  m_npksmax = localextrema::mapOfLocalMaximums<T>(data, mask, rows, cols, rank, m_local_maxima); // fills m_local_maxima
 
   //-------
   // TEST OF numberOfExtrema and vectorOfExtremeIndexes
-  m_npksmax = localextrema::numberOfExtrema(m_local_maxima, rows, cols, 7);
+  //m_npksmax = localextrema::numberOfExtrema(m_local_maxima, rows, cols, 7);
+
+  //std::cout << "XXX: nminima   =  " << m_nminima << '\n'; 
+  //std::cout << "XXX: m_npksmax =  " << m_npksmax << '\n'; 
 
   //std::vector<TwoIndexes> v = localextrema::vectorOfExtremeIndexes(m_local_maxima, rows, cols, 7, m_npksmax);
   //std::cout << "vector<TwoIndexes> size: " << v.size() << '\n'; 
   //-------
 
+  _initMapsAndVectors();
   _makeMapOfConnectedPixelsForLocalMaximums<T>(data); // fills m_conmap, v_peaks, vv_peak_pixinds
   _makeVectorOfSelectedPeaks();                       // make vector of selected peaks
   if (m_pbits & LOG::INFO) {
@@ -451,50 +470,26 @@ _makeMapOfConnectedPixelsForLocalMaximums(const T *data)
 {
   if(m_pbits & LOG::DEBUG) std::cout << "in _makeMapOfConnectedPixelsForLocalMaximums/n";
 
-  // Is not used in this algorithm, but just in case if someone call alg.maps_of_pixel_status()
-  //if (m_pixel_status==0) m_pixel_status = new pixstatus_t[m_img_size];
-  //std::fill_n(m_pixel_status, int(m_img_size), pixstatus_t(0));
-
-  // Is not used in all algorithms, but just in case if someone call alg.maps_of_pixel_status()
-
-  if (m_conmap==0) m_conmap = new conmap_t[m_img_size];
-  std::fill_n(m_conmap, int(m_img_size), conmap_t(0));
-
-  if(v_ind_pixgrp.capacity() != m_pixgrp_max_size) v_ind_pixgrp.reserve(m_pixgrp_max_size);
-
-  if(vv_peak_pixinds.capacity() < m_npksmax) vv_peak_pixinds.reserve(m_npksmax);
-     vv_peak_pixinds.clear();
-
-  if(v_peaks.capacity() < m_npksmax) v_peaks.reserve(m_npksmax);
-     v_peaks.clear();
-
-  _evaluateRingIndexes();
-
-  //std::cout << "XXX: in B\n";
+  const unsigned BIT_SEL=4; // <<=====
 
   int irc=0;
   m_numreg=0;
   for(int r=0; r<(int)m_rows; r++)
     for(int c=0; c<(int)m_cols; c++) {
 
-      //if(m_numreg > m_npksmax-2) {
-      //  if(m_pbits) std::cout << " Number of peaks exceeds reserved maximum " << m_npksmax << '\n';
-      //  return; // protection
-      //}
-
         irc = r*m_cols+c;
-        if(! (m_local_maxima[irc] & 4)) continue;
+        if(! (m_local_maxima[irc] & BIT_SEL)) continue;
 
         ++m_numreg;
 
         RingAvgRms bkgd = _evaluateRingAvgRmsV1<T>(data, r, c);
-        m_reg_thr = bkgd.avg + m_nsigm * bkgd.rms;
+        m_reg_thr = bkgd.avg + m_nsigm * bkgd.rms; // <<=====
 	//if (m_pbits & LOG::DEBUG)
 	//  std::cout << "XXX: m_numreg=" << m_numreg << " r=" << std::setw(4) << std::setprecision(0) << r 
         //                                            << " c=" << std::setw(4) << std::setprecision(0) << c 
         //                                            << " bkgd:" << bkgd << " thr:" << m_reg_thr << '\n';
 
-        _findConnectedPixelsForLocalMaximumV2<T>(data, r, c); 
+        _findConnectedPixelsForLocalMaximumV2<T>(data, r, c); // <<===== 
 	//std::cout << "XXX: number of connected pixels = " << v_ind_pixgrp.size() << '\n';
 	
         if(v_ind_pixgrp.empty()) {
@@ -551,9 +546,60 @@ _evaluateRingAvgRmsV1(const T *data
 
     // pixel selector:
     irc = ir*m_cols+ic;
+
     if(! m_mask[irc]) continue;           // skip masked pixels
     if(m_local_maxima[irc] & 7) continue; // skip extremal pixels
     if(m_local_minima[irc] & 7) continue; // skip extremal pixels
+
+    amp = (double)data[irc];
+    sum0 ++;
+    sum1 += amp;
+    sum2 += amp*amp;
+  }
+
+  if(sum0) {
+    sum1 /= sum0;                          // Averaged base level
+    sum2 = sum2/sum0 - sum1*sum1;
+    sum2 = (sum2>0) ? std::sqrt(sum2) : 0; // RMS of the background around peak
+  }
+
+  return RingAvgRms(sum1, sum2, sum0); // returns avg, rms, npx
+}
+
+//-----------------------------
+  /** The same as _evaluateRingAvgRmsV1, but selection of pixel is for Droplet
+   */
+
+template <typename T>
+RingAvgRms
+_evaluateRingAvgRmsForDroplet(const T *data
+		             ,const int& row
+                             ,const int& col
+                             )
+{
+  //if(m_pbits & LOG::DEBUG) std::cout << "in _evaluateRingAvgRmsForDroplet\n";
+
+  double   amp  = 0;
+  unsigned sum0 = 0;
+  double   sum1 = 0;
+  double   sum2 = 0;
+  int      irc  = 0;
+
+  for(vector<TwoIndexes>::const_iterator ij  = v_indexes.begin();
+                                         ij != v_indexes.end(); ij++) {
+    int ir = row + (ij->i);
+    int ic = col + (ij->j);
+
+    //std::cout << "YYY: " << " row=" << row << " col=" << col << " ir=" << ir << " ic=" << ic << '\n';
+
+    if(ic < 0 || !(ic < (int)m_cols)) continue;
+    if(ir < 0 || !(ir < (int)m_rows)) continue;
+
+    // pixel selector:
+    irc = ir*m_cols+ic;
+
+    if(! m_mask[irc]) continue;             // skip masked pixels
+    if(! m_local_maxima[irc] & 1) continue; // skip pixels with |a| > thr_low
 
     amp = (double)data[irc];
     sum0 ++;
@@ -607,10 +653,7 @@ _findConnectedPixelsForLocalMaximumV2(const T* data
 }
 
 //-----------------------------
-
-// Templated recursive method with data for fast termination
-// Returns true / false for pixel is ok / m_reg_a0 is not a local maximum
-// V3 news: mask and rank are passed as member data
+// Templated recursive method finging connected pixels for lacalMaximums
 
 template <typename T>
 void
@@ -622,9 +665,6 @@ _findConnectedPixelsInRegionV3(const T* data, const int& r, const int& c)
   if(! m_mask[irc]) return; // - masked
   if(m_conmap[irc]) return; // - pixel is already used
   if(data[irc] < (T)m_reg_thr) return; // discard pixel below threshold if m_reg_thr != 0 
-
-  //if(m_pixel_status(r,c) & 8) return; // pstat=4/8/16 : a<thr_low/used in recursion/used in map
-  //m_pixel_status(r,c) |= 8; // mark this pixel as used in this recursion to get rid of cycling  
 
   m_conmap[irc] = m_numreg; // mark pixel on map
 
@@ -741,6 +781,159 @@ _procPixGroupV1(const T* data
 
 //-----------------------------
 //-----------------------------
+//-----------------------------
+//-----------------------------
+  /**
+   * @brief peakFinderV4r3 - further development of ImgAlgos.peakFinderV4r2.
+   * Changes:
+   *   - use packahe psalgos
+   *   - get rid of ndarray
+   *   - pass most of parameters via member data - "Droplet-finder" - further improvement of V4r1.
+   */
+template <typename T>
+void
+peakFinderV4r3(const T *data
+              ,const mask_t *mask
+              ,const size_t& rows
+              ,const size_t& cols
+              ,const double& thr_low
+              ,const double& thr_high
+              ,const size_t& rank=5
+	      ,const double& r0=7.0
+	      ,const double& dr=2.0
+	       //,const double& nsigm=0
+              )
+{
+  m_mask = mask;
+  m_rows = rows;
+  m_cols = cols;
+  m_thr_low  = thr_low;
+  m_thr_high = thr_high;
+  m_rank = rank;
+  m_r0 = r0;
+  m_dr = dr;
+  m_nsigm = 0; // nsigm;
+  m_img_size = rows*cols;
+  m_pixgrp_max_size = pow(2*rank+1, 2);
+
+  if(m_pbits & LOG::DEBUG) std::cout << "in peakFinderV4r3, rank=" << rank << '\n';
+  if(m_pbits & LOG::INFO) printParameters();
+
+  if (m_local_minima==0) m_local_minima = new extrim_t[m_img_size];
+  if (m_local_maxima==0) m_local_maxima = new extrim_t[m_img_size];
+  std::fill_n(m_local_minima, int(m_img_size), extrim_t(0));
+
+  //m_nminima = localextrema::mapOfLocalMinimums<T>(data, mask, rows, cols, rank, m_local_minima);
+  m_npksmax = localextrema::mapOfThresholdMaximums<T>(data ,mask, rows, cols, rank, thr_low, thr_high, m_local_maxima);
+
+  //std::cout << "XXX: nminima   =  " << m_nminima << '\n'; 
+  //std::cout << "XXX: m_npksmax =  " << m_npksmax << '\n'; 
+
+  _initMapsAndVectors();
+  _makeMapOfConnectedPixelsForDroplets<T>(data);
+  _makeVectorOfSelectedPeaks();
+  //std::cout << "XXX: number of connected pixels = " << v_ind_pixgrp.size() << '\n';
+
+}
+
+//-----------------------------
+//-----------------------------
+  /**
+   * @brief full peak processing in a right order
+   *          1. estimate background
+   *          2. finds connected pixels
+   *          3. fills vector of peaks
+   * 
+   * @param[in]  data - pointer to 2-d array with calibrated intensities
+   */
+template <typename T>
+void 
+_makeMapOfConnectedPixelsForDroplets(const T *data)
+{
+  if(m_pbits & LOG::DEBUG) std::cout << "in _makeMapOfConnectedPixelsForDroplets/n";
+
+  const unsigned BIT_SEL=8; // <<===== bit for maximaa in rank in mapOfThresholdMaximums
+
+  int irc=0;
+  m_numreg=0;
+  for(int r=0; r<(int)m_rows; r++)
+    for(int c=0; c<(int)m_cols; c++) {
+
+        irc = r*m_cols+c;
+        if(! (m_local_maxima[irc] & BIT_SEL)) continue;
+
+        ++m_numreg;
+
+        RingAvgRms bkgd = _evaluateRingAvgRmsForDroplet<T>(data, r, c);
+        m_reg_thr = m_thr_low; // bkgd.avg + m_nsigm * bkgd.rms; // <<=====
+	//if (m_pbits & LOG::DEBUG)
+	//  std::cout << "XXX: m_numreg=" << m_numreg << " r=" << std::setw(4) << std::setprecision(0) << r 
+        //                                            << " c=" << std::setw(4) << std::setprecision(0) << c 
+        //                                            << " bkgd:" << bkgd << " thr:" << m_reg_thr << '\n';
+
+        _findConnectedPixelsForDroplet(r, c); // <<===== 
+	//std::cout << "XXX A: number of connected pixels = " << v_ind_pixgrp.size() << '\n';
+	
+        if(v_ind_pixgrp.empty()) {
+	  //std::cout << "XXX peakFinderV3r3 WARNING: v_ind_pixgrp is empty...\n";
+          --m_numreg; continue;
+        }
+
+         vv_peak_pixinds.push_back(v_ind_pixgrp);
+
+	_procPixGroupV1<T>(data, bkgd, v_ind_pixgrp); // proc connected group and fills v_peaks
+    }
+}
+
+//-----------------------------
+  /**
+   * @brief _findConnectedPixelsForDroplet - apply flood filling algorithms to find a group of connected pixels
+   * news: rank is passed as member data
+   * 
+   * @param[in]  r0 - droplet central pixel row-coordinate 
+   * @param[in]  c0 - droplet central pixel column-coordinate   
+   */
+
+//template <typename T>
+void
+_findConnectedPixelsForDroplet(const int& r0
+                              ,const int& c0
+                              )
+{
+  m_reg_rmin = std::max(0,           int(r0-m_rank));
+  m_reg_rmax = std::min((int)m_rows, int(r0+m_rank+1));
+  m_reg_cmin = std::max(0,           int(c0-m_rank));
+  m_reg_cmax = std::min((int)m_cols, int(c0+m_rank+1));
+
+  //if(m_pbits & LOG::DEBUG) std::cout << "in _findConnectedPixelsForLocalMaximum, seg=" << m_seg 
+  //                                   << " rank=" << m_rank  << " r0=" << r0 << " c0=" << c0 << '\n';
+
+  v_ind_pixgrp.clear();
+  _findConnectedPixelsInDroplet(r0, c0); // begin recursion
+}
+
+//-----------------------------
+// Recursive method finging connected pixels for Droplet
+
+void
+_findConnectedPixelsInDroplet(const int& r, const int& c)
+{
+  //if(m_pbits & LOG::DEBUG) 
+  //std::cout << "in _findConnectedPixelsInDroplet, r=" << r << " c=" << c << '\n';
+  int irc = r*m_cols+c;
+  if(m_local_maxima[irc]<2) return; // 0: masked, 1: <thr_low
+  if(m_conmap[irc]) return; // - pixel is already used
+
+  m_conmap[irc] = m_numreg; // mark pixel on map
+
+  v_ind_pixgrp.push_back(TwoIndexes(r,c));
+
+  if(  r+1 < m_reg_rmax)  _findConnectedPixelsInDroplet(r+1, c);
+  if(  c+1 < m_reg_cmax)  _findConnectedPixelsInDroplet(r, c+1);
+  if(!(r-1 < m_reg_rmin)) _findConnectedPixelsInDroplet(r-1, c);
+  if(!(c-1 < m_reg_cmin)) _findConnectedPixelsInDroplet(r, c-1);  
+}
+
 //-----------------------------
 //-----------------------------
 //-----------------------------

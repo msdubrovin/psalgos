@@ -20,8 +20,8 @@ ntest = int(sys.argv[1]) if len(sys.argv)>1 else 1
 print 'Test # %d' % ntest
 
 #------------------------------
-SKIP        = 0
-EVTMAX      = 3 + SKIP
+SKIP        = 3
+EVTMAX      = 1 + SKIP
 EVTPLOT     = 1 
 DO_PLOT     = True
 #------------------------------
@@ -33,7 +33,8 @@ DO_PLOT     = True
 #dsname = 'exp=cxif5315:run=169'
 #src    = psana.Source('DetInfo(CxiDs2.0:Cspad.0)')
 
-dsname = 'exp=mfxn8416:run=95'
+runnum = 95
+dsname = 'exp=mfxn8416:run=%d' % runnum
 #src    = psana.Source('MfxEndstation.0:Epix100a.0')
 src    = psana.Source('MfxEndstation.0:Rayonix.0')
 print '%s\nExample for\n  dataset: %s\n  source : %s' % (85*'_',dsname, src)
@@ -43,10 +44,9 @@ print '%s\nExample for\n  dataset: %s\n  source : %s' % (85*'_',dsname, src)
 #psana.setOption('psana.calib-dir', '/reg/d/psdm/CXI/cxif5315/calib')
 
 ds  = psana.DataSource(dsname)
-evt = ds.events().next()
 env = ds.env()
-
-runnum = evt.run()
+#evt = ds.events().next()
+#runnum = evt.run()
 
 #run = ds.runs().next()
 #runnum = run.run()
@@ -58,14 +58,14 @@ runnum = evt.run()
 det = AreaDetector(src, env, pbits=0)
 print 85*'_', '\nInstrument: %s  run number: %d' % (det.instrument(), runnum)
 
-nda_peds  = det.pedestals(evt)
+nda_peds  = det.pedestals(runnum)
 print_ndarr(nda_peds, 'nda_peds')
 
-#nda_bkgd  = det.bkgd(evt)
-#smask = det.mask(evt, calib=False, status=True, edges=True, central=True, unbond=True, unbondnbrs=True)
-mask = det.mask(evt, calib=False, status=True, edges=True).astype(np.uint16)
+#nda_bkgd  = det.bkgd(runnum)
+#smask = det.mask(runnum, calib=False, status=True, edges=True, central=True, unbond=True, unbondnbrs=True)
+mask = det.mask(runnum, calib=False, status=True, edges=True).astype(np.uint16)
 
-#mask = np.ones(nda_peds.shape, dtype=np.uint16)
+mask = np.ones(nda_peds.shape, dtype=np.uint16)
 
 ##-----------------------------
 #mask_img = np.loadtxt('../rel-mengning/work/roi_mask_nda_equ_arc.txt')
@@ -76,20 +76,23 @@ mask = det.mask(evt, calib=False, status=True, edges=True).astype(np.uint16)
 #xoffset, yoffset = 300, 300
 #xsize,   ysize   = 1150, 1150
 
-xoffset, yoffset = 0, 0
-xsize,   ysize   = (1920, 1920) #(768,704) # 800, 800 # (704, 768)
+#xoffset, yoffset = 0, 0
+#xsize,   ysize   = (1920, 1920) #(768,704) # 800, 800 # (704, 768)
+
+xoffset, yoffset = 600, 600
+xsize,   ysize   = 700, 700
 
 # Pixel image indexes
-iX  = np.array(det.indexes_x(evt), dtype=np.int64) #- xoffset
-iY  = np.array(det.indexes_y(evt), dtype=np.int64) #- yoffset
+iX  = np.array(det.indexes_x(runnum), dtype=np.int64) #- xoffset
+iY  = np.array(det.indexes_y(runnum), dtype=np.int64) #- yoffset
 
 # Protect indexes (should be POSITIVE after offset subtraction)
 imRow = np.select([iX<xoffset], [0], default=iX-xoffset)
 imCol = np.select([iY<yoffset], [0], default=iY-yoffset)
 
 # Pixel coordinates [um] (transformed as needed)
-Xum =  det.coords_y(evt)
-Yum = -det.coords_x(evt)
+Xum =  det.coords_y(runnum)
+Yum = -det.coords_x(runnum)
 
 # Derived pixel raduius in [um] and angle phi[degree]
 Rum = np.sqrt(Xum*Xum + Yum*Yum)
@@ -112,7 +115,7 @@ for evnum, evt in enumerate(ds.events()) :
 
     if evnum%100==0 : print 'Event %d' % (evnum)
 
-    if evnum<SKIP    : continue
+    if evnum<SKIP   : continue
     if evnum>=EVTMAX : break
 
     # get calibrated data ndarray and proccess it if it is available
@@ -139,8 +142,8 @@ for evnum, evt in enumerate(ds.events()) :
         #print_arr_attr(nda, 'calibrated data')
         t0_sec = time()
 
-        peaks = peaks_adaptive(nda, mask, rank=6, r0=8.0, dr=2.0, nsigm=4,\
-                               npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
+        peaks = peaks_adaptive(nda, mask, rank=3, r0=3.0, dr=4.0, nsigm=3,\
+                               npix_min=2, npix_max=None, amax_thr=0, atot_thr=0, son_min=3)
 
         ###===================
         print 'Event %d --- dt/evt = %f sec  img.shape=%s  number of peaks: %d' % (evnum, time()-t0_sec, str(nda.shape), len(peaks))
@@ -163,18 +166,19 @@ for evnum, evt in enumerate(ds.events()) :
             #nda = maps_of_conpix_equ        
             #nda = nda_bkgd
             #nda = nda_bkgd + regs_check      
-            img = det.image(evt, nda)
-            #img = det.image(evt, nda)[xoffset:xoffset+xsize,yoffset:yoffset+ysize]
+            #img = det.image(evt, nda)
+            img = det.image(evt, nda)[xoffset:xoffset+xsize,yoffset:yoffset+ysize]
             #img = det.image(evt, mask_img*nda)[xoffset:xoffset+xsize,yoffset:yoffset+ysize]
             #img = det.image(evt, maps_of_conpix_equ)[xoffset:xoffset+xsize,yoffset:yoffset+ysize]
-            ave, rms = img.mean(), img.std()
-            amin, amax = max(0,ave-1*rms), ave+3*rms
-            #amin, amax = 0, ave+3*rms
+           # ave, rms = img.mean(), img.std()
+           # amin, amax = max(0,ave-1*rms), ave+3*rms
+            amin, amax = 0, 1000
 
             axim1.clear()
             if imsh1 is not None : del imsh1
             imsh1 = None
-            gg.plot_imgcb(fig1, axim1, axcb1, imsh1, img, amin=amin, amax=amax, title='Image, ev: %04d' % evnum)
+            gg.plot_imgcb(fig1, axim1, axcb1, imsh1, img, amin=amin, amax=amax, title='Image, ev: %04d' % evnum, cmap='inferno') 
+            # cmap='inferno', 'gray, gray_r, jet, jet_r, magma, magma_r, ocean, ocean_r, pink,
             gg.move_fig(fig1, x0=400, y0=30)
 
             gg.plot_peaks_on_img(peaks_rec, axim1, imRow, imCol, color='w', lw=2) #, pbits=3)

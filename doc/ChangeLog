@@ -11,10 +11,23 @@ Package author: Mikhail S. Dubrovin
 Please describe any modifications that you made to the package in the
 reverse time order.
 
+Tag: V00-00-05
+2017-08-18 Mikhail S. Dubrovin
+- add peakfinder for droplets, update examples, cleanup code
+modified:
+examples/ex-02-localextrema.py
+examples/ex-04-pf-graph.py
+examples/ex-05-pf-on-data.py
+include/LocalExtrema.h
+include/PeakFinderAlgos.h
+pyext/psalgos_ext.pyx
+src/PeakFinderAlgos.cpp
+src/pypsalgos.py
+
+
 Tag: V00-00-04
 2017-08-15 Mikhail S. Dubrovin
 - add peakfinders etc in pypsalgos.py and examples
-
 modified:
 examples/ex-03-peakfinder.py
 examples/ex-04-pf-graph.py
