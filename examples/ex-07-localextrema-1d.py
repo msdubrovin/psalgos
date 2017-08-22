@@ -8,13 +8,11 @@ import numpy as np
 #data = ag.random_standard(shape=sh, mu=200, sigma=25, dtype=np.float64)
 #------------------------------
 
-def test01(tname='1', NUMBER_OF_EVENTS=5, DO_PRINT=False) :
+def test01(tname='1', NUMBER_OF_EVENTS=10, DO_PRINT=False) :
 
 
     print 'local extrema : %s' % ('minimums' if tname=='1'\
-                             else 'maximums' if tname=='2'\
-                             else 'maximums runk=1 cross'  if tname=='3'\
-                             else 'two-threshold maximums')
+                             else 'maximums')
 
     from time import time
     from pyimgalgos.GlobalUtils import print_ndarr
@@ -33,24 +31,24 @@ def test01(tname='1', NUMBER_OF_EVENTS=5, DO_PRINT=False) :
     for evnum in range(NUMBER_OF_EVENTS) :
 
         data = np.array(mu + sigma*np.random.standard_normal(sh), dtype=np.float64)
-        mask = np.ones(sh, dtype=np.uint16)
-        extrema = np.zeros(sh, dtype=np.uint16)
+        mask = np.ones(sh, dtype=np.uint16).flatten()
+        #mask = np.random.binomial(2, 0.80, data.size).astype(dtype=np.uint16)
+        extrema = np.zeros(sh, dtype=np.uint16).flatten()
+
         rank=5
         
-        thr_low = mu+3*sigma
-        thr_high = mu+4*sigma
-
         nmax = 0
 
         if DO_PRINT : print_ndarr(data, 'input data')
         t0_sec = time()
+
         #----------
-        if   tname=='1' : nmax = algos.local_minima_2d(data, mask, rank, extrema)
-        elif tname=='2' : nmax = algos.local_maxima_2d(data, mask, rank, extrema)
-        elif tname=='3' : nmax = algos.local_maxima_rank1_cross_2d(data, mask, extrema)
-        else            : nmax = algos.threshold_maxima_2d(data, mask, rank, thr_low, thr_high, extrema)
+        if   tname=='1' : nmax = algos.local_minima_1d(data.flatten(), mask, rank, extrema)
+        elif tname=='2' : nmax = algos.local_maxima_1d(data.flatten(), mask, rank, extrema)
         #----------
         print 'Event: %4d,  consumed time = %10.6f(sec),  nmax = %d' % (evnum, time()-t0_sec, nmax)
+
+        extrema.shape = sh
         
         if DO_PRINT : print_ndarr(extrema, 'output extrema')
         
@@ -77,12 +75,6 @@ def test01(tname='1', NUMBER_OF_EVENTS=5, DO_PRINT=False) :
     gg.show()
 
 #------------------------------
-
-def test02() :
-    algos.print_matrix_of_diag_indexes(rank=6)
-    algos.print_vector_of_diag_indexes(rank=6)
-
-#------------------------------
 #------------------------------
 #------------------------------
 #------------------------------
@@ -93,9 +85,6 @@ if __name__ == "__main__" :
     print 50*'_', '\nTest %s:' % tname
     if   tname == '1' : test01(tname)
     elif tname == '2' : test01(tname)
-    elif tname == '3' : test01(tname)
-    elif tname == '4' : test01(tname)
-    elif tname == '5' : test02()
     else : sys.exit('Test %s is not implemented' % tname)
     sys.exit('End of test %s' % tname)
 

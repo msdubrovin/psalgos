@@ -47,6 +47,18 @@ import numpy as np
 
 #------------------------------
 
+ctypedef fused nptype1d :
+    np.ndarray[np.float64_t, ndim=1, mode="c"]
+    np.ndarray[np.float32_t, ndim=1, mode="c"]
+    np.ndarray[np.int16_t,   ndim=1, mode="c"]
+    np.ndarray[np.int32_t,   ndim=1, mode="c"]
+    np.ndarray[np.int64_t,   ndim=1, mode="c"]
+    np.ndarray[np.uint16_t,  ndim=1, mode="c"]
+    np.ndarray[np.uint32_t,  ndim=1, mode="c"]
+    np.ndarray[np.uint64_t,  ndim=1, mode="c"]
+
+#------------------------------
+
 ctypedef fused nptype2d :
     np.ndarray[np.float64_t, ndim=2, mode="c"]
     np.ndarray[np.float32_t, ndim=2, mode="c"]
@@ -90,6 +102,22 @@ def test_nda_v1(nptype2d nda): ctest_nda(&nda[0,0], nda.shape[0], nda.shape[1])
 
 cdef extern from "psalgos/LocalExtrema.h" namespace "localextrema":
 
+    size_t localMinima1d[T](const T *data
+                           ,const mask_t *mask
+                           ,const size_t& cols
+                           ,const size_t& stride
+                           ,const size_t& rank
+                           ,extrim_t *arr1d
+                           )
+
+    size_t localMaxima1d[T](const T *data
+                           ,const mask_t *mask
+                           ,const size_t& cols
+                           ,const size_t& stride
+                           ,const size_t& rank
+                           ,extrim_t *arr1d
+                           )
+
     size_t mapOfLocalMinimums[T](const T *data
                                 ,const mask_t *mask
                                 ,const size_t& rows
@@ -125,6 +153,26 @@ cdef extern from "psalgos/LocalExtrema.h" namespace "localextrema":
 
     void printMatrixOfDiagIndexes(const size_t& rank)
     void printVectorOfDiagIndexes(const size_t& rank)
+
+
+def local_minima_1d(nptype1d data,\
+                    np.ndarray[mask_t, ndim=1, mode="c"] mask,\
+                    int32_t rank,\
+                    np.ndarray[extrim_t, ndim=1, mode="c"] arr1d\
+                   ):
+    stride = 1;
+    #print 'XXX psalgos_ext.py - data.size: %d   rank: %d' % (data.size, rank)
+    return localMinima1d(&data[0], &mask[0], data.size, stride, rank, &arr1d[0])
+
+
+def local_maxima_1d(nptype1d data,\
+                    np.ndarray[mask_t, ndim=1, mode="c"] mask,\
+                    int32_t rank,\
+                    np.ndarray[extrim_t, ndim=1, mode="c"] arr1d\
+                   ):
+    stride = 1;
+    #print 'XXX psalgos_ext.py - data.size: %d   rank: %d' % (data.size, rank)
+    return localMaxima1d(&data[0], &mask[0], data.size, stride, rank, &arr1d[0])
 
 
 def local_minimums(nptype2d data,\
@@ -434,7 +482,6 @@ cdef class peak_finder_algos :
         cdef np.ndarray[conmap_t, ndim=2] arr2d = np.ascontiguousarray(np.empty(sh, dtype=np.uint32))
         self.cptr.connectedPixels(&arr2d[0,0], self.rows, self.cols)
         return arr2d
-
 
 
 #    @property

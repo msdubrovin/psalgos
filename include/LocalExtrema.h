@@ -98,6 +98,217 @@ std::vector<TwoIndexes> vectorOfExtremeIndexes(const extrim_t *map, const size_t
 
 //-----------------------------
   /**
+   * @brief returns number of found minima and array local_minima of local minimums of requested rank, 
+   *        where rank defins a square region [cols-rank, cols+rank]. Assumes that cols > 2*rank...
+   * 
+   * 1-d array of local minumum of (uint16) values of data shape, 
+   * with 0/+1/+2 for bad/non-minumum/minimum in rank region.   
+   * @param[in]  data - pointer to data array
+   * @param[in]  mask - pointer to mask array; mask marks bad/good (0/1) pixels
+   * @param[in]  cols - number of columns in 1d array
+   * @param[in]  stride - index increment between neighbour elements. Makes sence for n-d arrays
+   * @param[in]  rank - radius of the square region in which central pixel has a maximal value
+   * @param[out] local_minima  - pointer to the array local_minima
+   */
+//-----------------------------
+
+template <typename T>
+size_t 
+localMinima1d(const T *data
+             ,const mask_t *mask
+             ,const size_t& cols
+             ,const size_t& stride=1
+             ,const size_t& rank=5
+             ,extrim_t *local_minima=0
+             )
+{
+  extrim_t *_local_minima = local_minima;
+  size_t counter = 0;
+
+  for(unsigned c=0, i=0; c<cols; c++, i+=stride) _local_minima[i]=(mask[i]) ? 1 : 0; // good/bad pixel
+
+  unsigned i=0, ii=0;
+
+  // check for extrema at the low edge [0,runk).
+  for(unsigned c=0; c<rank; c++) {
+      i = c*stride;
+      if(!mask[i]) continue;
+      _local_minima[i] |= 2;
+      for(unsigned cc=c+1; cc<c+rank+1; cc++) {
+	  ii = cc*stride;
+	  if(mask[ii] && (data[ii] < data[i])) { 
+              _local_minima[i] &=~2; // clear 2nd bit
+              c = cc - 1;            // jump ahead, c will be incremented in the for loop
+	      break;
+	  }
+      }
+      if(_local_minima[c] & 2) {
+        counter ++;
+	break;
+      }
+  }
+
+  // check for extreme in the range [rank, cols-rank)
+  for(unsigned c=rank; c<cols-rank; c++) {
+      i = c*stride;
+      if(!mask[i]) continue;
+      _local_minima[i] |= 2; // set 2nd bit
+
+      // check positive side of c
+      for(unsigned cc=c+1; cc<c+rank+1; cc++) {
+	  ii = cc*stride;
+	  if(mask[ii] && (data[ii] < data[i])) { 
+              _local_minima[i] &=~2; // clear 2nd bit
+              c = cc - 1;            // jump ahead, c will be incremented in the for loop 
+	      break;
+	  }
+      }
+
+      if(_local_minima[i] & 2) {
+          // check negative side of c
+	  for(unsigned cc=c-rank; cc<c; cc++) {
+	      ii = cc*stride;
+	      if(mask[ii] && (data[ii] < data[i])) { 
+                  _local_minima[i] &=~2; // clear 2nd bit
+                  c = cc + rank;  // jump ahead, c will be incremented in the for loop 
+	          break;
+	      }
+          }
+      }
+      if(_local_minima[c] & 2) counter ++;
+  } // loop in the range [rank, cols-rank]
+
+  // check for extreme at the high edge [cols-rank, cols).
+  for(unsigned c=cols-1; c>cols-rank-1; c--) {
+      i = c*stride;
+      if(!mask[i]) continue;
+      _local_minima[i] |= 2;
+      for(unsigned cc=c-1; cc>c-rank-1; cc--) {
+	  ii = cc*stride;
+	  if(mask[ii] && (data[ii] < data[i])) { 
+              _local_minima[i] &=~2; // clear 2nd bit
+              c = cc;                // jump ahead, c will be incremented in the for loop
+	      break;
+	  }
+      }
+      if(_local_minima[c] & 2) {
+        counter ++;
+	break;
+      }
+
+  }
+  return counter;
+}
+
+//-----------------------------
+//-----------------------------
+  /**
+   * @brief returns number of found maxima and array local_maxima of local minimums of requested rank, 
+   *        where rank defins a square region [cols-rank, cols+rank]. Assumes that cols > 2*rank...
+   * 
+   * 1-d array of local minumum of (uint16) values of data shape, 
+   * with 0/+1/+2 for bad/non-minumum/minimum in rank region.   
+   * @param[in]  data - pointer to data array
+   * @param[in]  mask - pointer to mask array; mask marks bad/good (0/1) pixels
+   * @param[in]  cols - number of columns in 1d array
+   * @param[in]  stride - index increment between neighbour elements. Makes sence for n-d arrays
+   * @param[in]  rank - radius of the square region in which central pixel has a maximal value
+   * @param[out] local_maxima  - pointer to the array local_maxima
+   */
+//-----------------------------
+
+template <typename T>
+size_t 
+localMaxima1d(const T *data
+             ,const mask_t *mask
+             ,const size_t& cols
+             ,const size_t& stride=1
+             ,const size_t& rank=5
+             ,extrim_t *local_maxima=0
+             )
+{
+  extrim_t *_local_maxima = local_maxima;
+  size_t counter = 0;
+
+  for(unsigned c=0, i=0; c<cols; c++, i+=stride) _local_maxima[i]=(mask[i]) ? 1 : 0; // good/bad pixel
+
+  unsigned i=0, ii=0;
+
+  // check for extrema at the low edge [0,runk).
+  for(unsigned c=0; c<rank; c++) {
+      i = c*stride;
+      if(!mask[i]) continue;
+      _local_maxima[i] |= 2;
+      for(unsigned cc=c+1; cc<c+rank+1; cc++) {
+	  ii = cc*stride;
+	  if(mask[ii] && (data[ii] > data[i])) { 
+              _local_maxima[i] &=~2; // clear 2nd bit
+              c = cc - 1;            // jump ahead, c will be incremented in the for loop
+	      break;
+	  }
+      }
+      if(_local_maxima[c] & 2) {
+        counter ++;
+	break;
+      }
+  }
+
+  // check for extreme in the range [rank, cols-rank)
+  for(unsigned c=rank; c<cols-rank; c++) {
+      i = c*stride;
+      if(!mask[i]) continue;
+      _local_maxima[i] |= 2; // set 2nd bit
+
+      // check positive side of c
+      for(unsigned cc=c+1; cc<c+rank+1; cc++) {
+	  ii = cc*stride;
+	  if(mask[ii] && (data[ii] > data[i])) { 
+              _local_maxima[i] &=~2; // clear 2nd bit
+              c = cc - 1;            // jump ahead, c will be incremented in the for loop 
+	      break;
+	  }
+      }
+
+      if(_local_maxima[i] & 2) {
+          // check negative side of c
+	  for(unsigned cc=c-rank; cc<c; cc++) {
+	      ii = cc*stride;
+	      if(mask[ii] && (data[ii] > data[i])) { 
+                  _local_maxima[i] &=~2; // clear 2nd bit
+                  c = cc + rank;  // jump ahead, c will be incremented in the for loop 
+	          break;
+	      }
+          }
+      }
+      if(_local_maxima[c] & 2) counter ++;
+  } // loop in the range [rank, cols-rank]
+
+  // check for extreme at the high edge [cols-rank, cols).
+  for(unsigned c=cols-1; c>cols-rank-1; c--) {
+      i = c*stride;
+      if(!mask[i]) continue;
+      _local_maxima[i] |= 2;
+      for(unsigned cc=c-1; cc>c-rank-1; cc--) {
+	  ii = cc*stride;
+	  if(mask[ii] && (data[ii] > data[i])) { 
+              _local_maxima[i] &=~2; // clear 2nd bit
+              c = cc;                // jump ahead, c will be incremented in the for loop
+	      break;
+	  }
+      }
+      if(_local_maxima[c] & 2) {
+        counter ++;
+	break;
+      }
+
+  }
+  return counter;
+}
+
+//-----------------------------
+
+//-----------------------------
+  /**
    * @brief returns map of local minimums of requested rank, 
    *        where rank defins a square region around central pixel [rowc-rank, rowc+rank], [colc-rank, colc+rank].
    * 
