@@ -17,10 +17,12 @@ source conda_setup
 git clone https://github.com/lcls-psana/psalgos.git
 ```
 
-<!---
 ## Documentation
 https://lcls-psana.github.io/psalgos/
 
+
+
+<!---
 ## Markup example
 ### header3
 #### header4
