@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 #------------------------------
+"""
+Created on 2017-08-10 by Mikhail Dubrovin
 
-import psalgos
-import numpy as np
-
-#from pyimgalgos.GlobalUtils import print_ndarr
-
-"""Class provides access to C++ algorithms from python.
+Class provides access to C++ algorithms from python.
 
 Usage::
+
     # IMPORT MISC
     # ===========
     import numpy as np
@@ -62,19 +60,15 @@ Usage::
     from psalgos.pypsalgos import peaks_adaptive, peaks_droplet, peaks_adaptive_2d, peaks_droplet_2d
 
     # data and mask are 2-d numpy arrays of the same shape    
-    peaks = peaks_adaptive_2d(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=5,\
-                              seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
+    peaks = peaks_adaptive_2d(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=5, seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
 
-    peaks = peaks_droplet_2d(data, mask=None, thr_low, thr_high, rank=5, r0=7.0, dr=2.0,\
-                             seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
+    peaks = peaks_droplet_2d(data, mask=None, thr_low, thr_high, rank=5, r0=7.0, dr=2.0, seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
 
     # data and mask are N-d numpy arrays or list of 2-d numpy arrays of the same shape    
-    peaks = peaks_adaptive(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=3,\
-                           npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
+    peaks = peaks_adaptive(data, mask, rank=5, r0=7.0, dr=2.0, nsigm=3, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
 
     # data and mask are N-d numpy arrays or list of 2-d numpy arrays of the same shape    
-    peaks = peaks_droplet(data, mask=None, thr_low, thr_high, rank=5, r0=7.0, dr=2.0,\
-                          npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
+    peaks = peaks_droplet(data, mask=None, thr_low, thr_high, rank=5, r0=7.0, dr=2.0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8)
 
     peak_pars = list_of_peak_parameters(peaks)
 
@@ -111,6 +105,14 @@ Usage::
 """
 
 #------------------------------
+#
+#from pyimgalgos.GlobalUtils import print_ndarr
+#
+
+import psalgos
+import numpy as np
+
+#------------------------------
 
 def shape_as_2d(sh) :
     """Returns 2-d shape for n-d shape if n>2, otherwise returns unchanged shape.
@@ -145,75 +147,95 @@ def reshape_to_3d(arr) :
 #------------------------------
 
 def local_minima_1d(data, mask=None, rank=3, extrema=None) :
+    """Finds local minima of specified rank in 1-d array of data with mask and returns results in array extrema.
+    """
     if extrema is None : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
     return psalgos.local_minima_1d(data, _mask, rank, extrema)
 
-local_minimums_1d = local_minima_1d
+#local_minimums_1d = local_minima_1d
 
 #------------------------------
 
 def local_maxima_1d(data, mask=None, rank=3, extrema=None) :
+    """Finds local maxima of specified rank in 1-d array of data with mask and returns results in array extrema.
+    """
     if extrema is None : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
     return psalgos.local_maxima_1d(data, _mask, rank, extrema)
 
-local_maximums_1d = local_maxima_1d
+#local_maximums_1d = local_maxima_1d
 
 #------------------------------
 
 def local_minima_2d(data, mask=None, rank=3, extrema=None) :
+    """Finds local minima of specified rank in 2-d array of data with mask and returns results in array extrema.
+    """
     if extrema is None : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
     return psalgos.local_minimums(data, _mask, rank, extrema)
 
-local_minimums_2d = local_minima_2d
+#local_minimums_2d = local_minima_2d
 
 #------------------------------
 
 def local_maxima_2d(data, mask=None, rank=3, extrema=None) :
+    """Finds local maxima of specified rank in 2-d array of data with mask and returns results in array extrema.
+    """
     if extrema is None : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
     return psalgos.local_maximums(data, _mask, rank, extrema)
 
-local_maximums_2d = local_maxima_2d
+#local_maximums_2d = local_maxima_2d
 
 #------------------------------
 
 def local_maxima_rank1_cross_2d(data, mask=None, extrema=None) :
+    """Finds local maxima rank=1 cross in 2-d array of data with mask and returns results in array extrema.
+    """
     if extrema is None : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
     return psalgos.local_maximums_rank1_cross(data, _mask, extrema)
 
-local_maximums_rank1_cross_2d = local_maxima_rank1_cross_2d
+#local_maximums_rank1_cross_2d = local_maxima_rank1_cross_2d
 
 #------------------------------
 
 def threshold_maxima_2d(data, mask=None, rank=3, thr_low=None, thr_high=None, extrema=None) :
+    """Finds local maxima using 2-threshold algorithm in 2-d array of data with mask and returns results in array extrema.
+    """
     if (thr_low is None) or (thr_high is None) or (extrema is None) : return
     _mask = mask if mask is not None else np.ones(data.shape, dtype=np.uint16)
     return psalgos.threshold_maximums(data, _mask, rank, thr_low, thr_high, extrema)
 
-threshold_maximums_2d = threshold_maxima_2d
+#threshold_maximums_2d = threshold_maxima_2d
 
 #------------------------------
 
-def print_matrix_of_diag_indexes(rank=5) : psalgos.print_matrix_of_diag_indexes(rank)
+def print_matrix_of_diag_indexes(rank=5) : 
+    """Prints matrix of diagonal indexes for local_maxima_2d and local_minima_2d algorithms.
+    """
+    psalgos.print_matrix_of_diag_indexes(rank)
 
 #------------------------------
 
-def print_vector_of_diag_indexes(rank=5) : psalgos.print_vector_of_diag_indexes(rank)
+def print_vector_of_diag_indexes(rank=5) : 
+    """Prints vector of diagonal indexes for local_maxima_2d and local_minima_2d algorithms.
+    """
+    psalgos.print_vector_of_diag_indexes(rank)
 
 #------------------------------
 
 def peak_finder_alg_2d(seg=0, pbits=0) :
+    """Creates and returns algorithm object.
+    """
     return psalgos.peak_finder_algos(seg, pbits)
 
 #------------------------------
 
 def peaks_adaptive_2d(data, mask=None, rank=5, r0=7.0, dr=2.0, nsigm=5,\
                       seg=0, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=8) :
-    """ peak finder for 2-d numpy arrays of data and mask of the same shape
+    """Peak finder for 2-d numpy arrays of data and mask of the same shape
     """
     #from time import time
 
@@ -375,7 +397,6 @@ class PyAlgos :
     """Backward compatability support for ImgAlgos.PyAlgos.
     """
     def __init__(self, windows=None, mask=None, pbits=0) :
-
         """Parameters
             - windows - is not used.
             - mask - numpy.array of the same shape as data or None.
@@ -389,6 +410,8 @@ class PyAlgos :
 
 
     def set_peak_selection_pars(self, npix_min=1, npix_max=None, amax_thr=0, atot_thr=0, son_min=6) :
+        """Sets peak selection parameters.
+        """
         self.npix_min = npix_min
         self.npix_max = npix_max
         self.amax_thr = amax_thr
@@ -397,6 +420,17 @@ class PyAlgos :
 
 
     def peak_finder_v3r3(self, data, rank=5, r0=7, dr=2, nsigm=5, mask=None) :
+        """runs "ranker" peakfinder and returns the list of peak parameters.
+
+        :param np.array data: n-d numpy array or list of 2-d numpy arrays of data 
+        :param int rank: radial size or the region [row-rank:row+rank, col-rank:col+rank] where central pixel is a local maximum
+        :param float r0: radius [in pixels] of the ring for background evaluation
+        :param float dr: width [in pixels] of the ring for background evaluation
+        :param float nsigm: threshold on intensity to include pixel in connected group in terms of number of sigma (rms) estimated for pixels in the ring defined by r0 and dr
+        :param np.array mask: mask uint16 shaped as data
+        :return: list of tuple peak parameters (seg, row, col, npix, amp_max, amp_tot, row_cgrav, col_cgrav, row_sigma, col_sigma, row_min, row_max, col_min, col_max, bkgd, noise, son)
+        :rtype: list of tuples
+        """
         _mask = mask if mask is not None else self.mask
         _r0 = r0 if r0 is not None else self.r0
         _dr = dr if dr is not None else self.dr
@@ -406,6 +440,18 @@ class PyAlgos :
 
 
     def peak_finder_v4r3(self, data, thr_low=20, thr_high=50, rank=5, r0=7, dr=2, mask=None) :
+        """runs "droplet-finder" and returns the list of peak parameters.
+
+        :param np.array data: n-d numpy array or list of 2-d numpy arrays of data 
+        :param float thr_low: low threshold [ADU] - used to include pixel in connected group and select pixels to estimate rms and mean in the ring
+        :param float thr_high: high threshold [ADU] - used to search for local maxima candidate
+        :param int rank: radial size or the region [row-rank, row+rank] where central pixel is a local maximum
+        :param float r0: radius [in pixels] of the ring for background evaluation
+        :param float dr: width [in pixels] of the ring for background evaluation
+        :param np.array mask: mask uint16 shaped as data
+        :return: list of tuple peak parameters (seg, row, col, npix, amp_max, amp_tot, row_cgrav, col_cgrav, row_sigma, col_sigma, row_min, row_max, col_min, col_max, bkgd, noise, son)
+        :rtype: list of tuples
+        """
         _mask = mask if mask is not None else self.mask
         _r0 = r0 if r0 is not None else self.r0
         _dr = dr if dr is not None else self.dr
