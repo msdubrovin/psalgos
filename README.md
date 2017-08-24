@@ -4,7 +4,7 @@ A set of pythonic methods for data processing with extensive implementation in C
 ## Quick start
 ### Install in conda release directory
 ### Create conda repository 
-See for detail: [Psana Developer Documentation] 
+See for detail: [Psana Developer Documentation]
 (https://confluence.slac.stanford.edu/display/PSDMInternal/Psana+Developer+Documentation)
 ```
 cd <my-conda-repo>
@@ -16,6 +16,8 @@ source conda_setup
 ```
 git clone https://github.com/lcls-psana/psalgos.git
 ```
+
+<!---
 ## Documentation
 https://lcls-psana.github.io/psalgos/
 
@@ -31,3 +33,4 @@ https://lcls-psana.github.io/psalgos/
 ```
 some code
 ```
+--->
