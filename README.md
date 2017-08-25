@@ -1,26 +1,35 @@
 # psalgos
-A set of pythonic methods for data processing with extensive implementation in C++ with cython interface.
+A set of pythonic methods for data processing with back-end implementation in C++ and cython interface.
+
+## Documentation
+[Sphinx generated documentation] : https://lcls-psana.github.io/psalgos/
 
 ## Quick start
-### Install in conda release directory
-### Create conda repository 
-See for detail: [Psana Developer Documentation]
-(https://confluence.slac.stanford.edu/display/PSDMInternal/Psana+Developer+Documentation)
+### Create conda release
+See for detail: [Psana Developer Documentation][2] 
 ```
-cd <my-conda-repo>
+cd <my-conda-release>
 source conda_setup
 ```
 
-### Clone package in conda repository
+### Clone package
 **on pslogin:**
 ```
 git clone https://github.com/lcls-psana/psalgos.git
 ```
+or 
+```
+condarel --addpkg --name psalgos --tag HEAD
+```
+### Build 
+```
+scons
+```
 
-## Documentation
-https://lcls-psana.github.io/psalgos/
-
-
+## References
+- [1] https://lcls-psana.github.io/psalgos/
+- [2] https://confluence.slac.stanford.edu/display/PSDMInternal/Psana+Developer+Documentation
+- [3] https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet
 
 <!---
 ## Markup example
